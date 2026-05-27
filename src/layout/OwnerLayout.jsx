@@ -31,6 +31,23 @@ const OwnerLayout = ({ children }) => {
 
   const location = useLocation();
 
+  const getTitleFromRoute = () => {
+    switch (location.pathname) {
+      case "/owner":
+        return "Quản Lý Đua Ngựa";
+      case "/owner/jockey":
+        return "Gắn Jockey Cho Ngựa";
+      case "/owner/races":
+        return "Đăng Ký Vào Cuộc Đua";
+      case "/owner/wallet":
+        return "Quản Lý Ví";
+      case "/owner/horses":
+        return "Quản Lý Ngựa";
+      default:
+        return "Quản Lý Đua Ngựa";
+    }
+  };
+
   const menuItems = [
     { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", badge: 4 },
     { to: "/owner/jockey", icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
@@ -116,7 +133,7 @@ const OwnerLayout = ({ children }) => {
         {/* Header */}
         <header className="h-20 flex items-center justify-between px-10 border-b border-white/5">
            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-             <span>Owner Portal</span> <span className="opacity-30">/</span> <span className="text-white">Quản Lý Đua Ngựa</span>
+             <span>Owner Portal</span> <span className="opacity-30">/</span> <span className="text-white">{getTitleFromRoute()}</span>
            </div>
            <div className="flex items-center space-x-6">
              <div className="relative">

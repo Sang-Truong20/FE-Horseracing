@@ -6,6 +6,8 @@ import OwnerLayout from "../layout/OwnerLayout";
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
 import ManageRaces from "../pages/Owner/ManageRaces";
+import ManageJockeys from "../pages/Owner/ManageJockeys";
+import ManageWallet from "../pages/Owner/ManageWallet";
 
 // Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
@@ -33,8 +35,16 @@ export const router = createBrowserRouter([
         element: <OwnerLayout><OwnerDashboard /></OwnerLayout>,
       },
       {
+        path: "jockey",
+        element: <OwnerLayout><ManageJockeys /></OwnerLayout>,
+      },
+      {
         path: "races",
         element: <OwnerLayout><ManageRaces /></OwnerLayout>,
+      },
+      {
+        path: "wallet",
+        element: <OwnerLayout><ManageWallet /></OwnerLayout>,
       },
       {
         path: "horses",
