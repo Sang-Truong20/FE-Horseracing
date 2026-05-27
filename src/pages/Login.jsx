@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux"; // Cần thiết
 import { useNavigate } from "react-router-dom"; // Cần thiết
-import { User, Lock, Eye, EyeOff, LogIn } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Trophy } from "lucide-react";
+import { motion } from "framer-motion";
 import api from "../config/axios";
 import { loginSuccess } from "../redux/features/userSlice";
 
@@ -59,67 +60,86 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#05070A] text-white font-sans">
-      <div className="flex flex-col justify-center items-center w-full p-6 bg-radial-at-t from-[#0F172A] to-[#05070A]">
-        <div className="w-full max-w-md bg-[#0D1117] p-10 rounded-[40px] border border-white/5 shadow-2xl">
-          
-          <div className="flex flex-col items-center mb-8">
-             <div className="w-16 h-16 border-2 border-[#D9A520]/40 rounded-2xl flex items-center justify-center mb-6 bg-[#D9A520]/5">
-                <LogIn className="text-[#D9A520] w-8 h-8" />
-             </div>
-             <h2 className="text-3xl font-bold mb-3 tracking-tight text-white">Đăng Nhập</h2>
-             <p className="text-gray-500 text-center text-sm px-6">
-               Chào mừng trở lại! Đăng nhập để quản lý hệ thống đua ngựa.
-             </p>
+    <div className="min-h-screen bg-gradient-to-br from-[#0b0218] via-[#2c063a] to-[#4b0f78] flex items-center justify-center p-6">
+      <div className="w-full max-w-lg relative overflow-hidden rounded-3xl bg-[rgba(8,4,20,0.78)] ring-1 ring-white/6 p-10 shadow-[0_30px_90px_rgba(75,17,150,0.18)]">
+        <style>{`
+          .card-gloss { background: radial-gradient(ellipse at top left, rgba(255,255,255,0.04), transparent 30%); }
+        `}</style>
+        <motion.div
+          className="absolute inset-0 opacity-80 blur-[6px] pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, rgba(255,0,150,0.12), rgba(0,220,200,0.12), rgba(120,0,255,0.12))', backgroundSize: '300% 300%', mixBlendMode: 'screen' }}
+          animate={{ x: ['-25%', '25%', '-25%'] }}
+          transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
+        />
+        <div className="absolute -top-24 -left-16 w-72 h-72 rounded-full bg-gradient-to-tr from-white/6 to-transparent opacity-30 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-white/8 to-transparent opacity-20 pointer-events-none" />
+        <div className="flex flex-col items-center gap-3 mb-6 relative z-10">
+          <div className="inline-flex items-center gap-3 rounded-full bg-[#0f1220]/60 px-4 py-2 text-[#E9C85A] ring-1 ring-white/6">
+            <Trophy size={18} />
+            <span className="text-sm font-black">Thunder Track</span>
+          </div>
+          <h2 className="text-4xl font-extrabold text-white tracking-tight drop-shadow-lg">Đăng nhập</h2>
+          <p className="text-sm text-purple-100 text-center">Quản lý ngựa, jockey và cuộc đua.</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="sr-only">Tài khoản</label>
+            <div className="relative rounded-xl border border-white/10 bg-[#0B101A] px-4 py-3">
+              <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Tên tài khoản..."
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
+                required
+                className="w-full bg-transparent pl-10 text-sm text-white outline-none placeholder:text-gray-500"
+              />
+            </div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Tài Khoản</label>
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-[#D9A520]" />
-                <input
-                  type="text"
-                  placeholder="Nhập tên tài khoản..."
-                  className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-[#D9A520]/50 transition-all text-sm text-white"
-                  value={emailOrUsername}
-                  onChange={(e) => setEmailOrUsername(e.target.value)}
-                  required
-                />
-              </div>
+          <div>
+            <label className="sr-only">Mật khẩu</label>
+            <div className="relative rounded-xl border border-white/10 bg-[#0B101A] px-4 py-3">
+              <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-transparent pl-10 pr-10 text-sm text-white outline-none placeholder:text-gray-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-2 px-1">Mật Khẩu</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-[#D9A520]" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Nhập mật khẩu..."
-                  className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:border-[#D9A520]/50 transition-all text-sm text-white"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
+          <div className="flex items-center justify-between text-sm text-gray-400">
+            <label className="inline-flex items-center gap-2">
+              <input type="checkbox" className="h-4 w-4 rounded-md border border-white/10 bg-[#03050A] text-[#D9A520]" />
+              Ghi nhớ
+            </label>
+            <button type="button" className="text-[#D9A520]">Quên mật khẩu?</button>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#D9A520] hover:bg-[#B8860B] text-black font-black py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center space-x-2 uppercase text-xs tracking-widest"
-            >
-              <LogIn size={18} />
-              <span>{loading ? "ĐANG XỬ LÝ..." : "Đăng nhập hệ thống"}</span>
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-gradient-to-r from-[#D9A520] to-[#EBCB75] py-3 text-sm font-black text-black"
+          >
+            {loading ? "ĐANG..." : "Đăng nhập"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-xs text-gray-500">© 2026 Thunder Track</p>
+        <div className="relative z-10">
+          <div className="card-gloss absolute inset-0 pointer-events-none opacity-40" />
         </div>
       </div>
     </div>
