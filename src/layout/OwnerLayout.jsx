@@ -1,0 +1,118 @@
+import React from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../redux/features/userSlice";
+import { 
+  LayoutDashboard, Users, ClipboardList, Wallet, 
+  Trophy, Flame, DollarSign, LogOut, Search, Bell, PlusCircle
+} from "lucide-react";
+
+const OwnerLayout = ({ children }) => {
+  const { user } = useSelector((state) => state.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const menuItems = [
+    { icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", active: true, badge: 4 },
+    { icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
+    { icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
+    { icon: <Wallet size={20}/>, label: "Quản Lý Ví" },
+  ];
+
+  return (
+    <div className="flex min-h-screen bg-[#05070A] text-gray-300 font-sans">
+      {/* SIDEBAR */}
+      <aside className="w-72 border-r border-white/5 flex flex-col p-6 space-y-8 bg-[#0D1117]/50">
+        <div className="flex items-center space-x-3 px-2">
+          <div className="bg-[#D9A520] p-2 rounded-lg text-black"><Trophy size={20}/></div>
+          <div>
+             <h1 className="font-black text-white leading-tight uppercase tracking-tighter">Thunder <span className="text-[#D9A520]">Track</span></h1>
+             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Management System</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-2 text-sm font-semibold">
+          <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-2 pb-2">Owner Portal</p>
+          {menuItems.map((item, idx) => (
+            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${item.active ? "bg-[#D9A520]/10 text-[#D9A520] border border-[#D9A520]/20" : "hover:bg-white/5"}`}>
+              <div className="flex items-center space-x-3">
+                {item.icon}
+                <span>{item.label}</span>
+              </div>
+              {item.badge && <span className="bg-[#D9A520] text-black text-[10px] px-2 py-0.5 rounded-full font-black">{item.badge}</span>}
+            </div>
+          ))}
+
+          <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-2 pt-8 pb-2">Thống kê nhanh</p>
+          <div className="space-y-4 px-2">
+            <div className="flex justify-between items-center text-xs text-gray-400">
+               <span className="flex items-center gap-2"><Trophy size={14}/> Tổng chiến thắng</span>
+               <span className="text-[#D9A520] font-bold">27</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-400">
+               <span className="flex items-center gap-2"><Flame size={14}/> Đua đang mở</span>
+               <span className="text-purple-500 font-bold">3</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-400">
+               <span className="flex items-center gap-2"><DollarSign size={14}/> Doanh thu</span>
+               <span className="text-emerald-500 font-bold">₫ 84M</span>
+            </div>
+          </div>
+        </nav>
+
+        {/* User Button (Góc dưới Sidebar) */}
+        <div className="mt-auto border-t border-white/5 pt-6 space-y-4">
+           <div className="bg-gradient-to-br from-indigo-900/40 to-black p-4 rounded-2xl border border-indigo-500/20 relative overflow-hidden group">
+              <span className="text-[10px] text-[#D9A520] font-bold block mb-1">Pro Owner 👑</span>
+              <p className="text-[10px] text-gray-500 leading-tight">Nâng cấp để đăng ký không giới hạn cuộc đua</p>
+              <button className="mt-3 bg-[#D9A520] text-black text-[10px] font-black px-3 py-1.5 rounded-lg w-full">Nâng Cấp Ngay</button>
+           </div>
+
+           <div className="flex items-center justify-between group cursor-pointer bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
+                   {user?.fullName?.charAt(0) || "U"}
+                </div>
+                <div className="overflow-hidden">
+                  <h4 className="text-xs font-bold text-white truncate w-24 uppercase">{user?.username}</h4>
+                  <p className="text-[10px] text-gray-500 font-medium">Owner • VIP</p>
+                </div>
+              </div>
+              <button onClick={() => dispatch(logout())} className="text-gray-600 hover:text-red-500"><LogOut size={16}/></button>
+           </div>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Header */}
+        <header className="h-20 flex items-center justify-between px-10 border-b border-white/5">
+           <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+             <span>Owner Portal</span> <span className="opacity-30">/</span> <span className="text-white">Quản Lý Đua Ngựa</span>
+           </div>
+           <div className="flex items-center space-x-6">
+             <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                <input type="text" placeholder="Tìm kiếm ngựa..." className="bg-black/50 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[#D9A520]/50 w-64 transition-all" />
+             </div>
+             <button className="p-2.5 bg-white/5 rounded-xl text-gray-400 hover:text-white relative transition-colors">
+                <Bell size={20}/>
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
+             </button>
+             <button className="flex items-center space-x-2 bg-[#D9A520] text-black font-black px-5 py-2.5 rounded-xl shadow-[0_5px_15px_rgba(217,165,32,0.2)] hover:opacity-90 transition-all text-xs uppercase tracking-tighter">
+                <PlusCircle size={18}/>
+                <span>Thêm Ngựa Mới</span>
+             </button>
+           </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
+           {children}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default OwnerLayout;
