@@ -5,6 +5,7 @@ import Login from "../pages/Login";
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
+import ManageRaces from "../pages/Owner/ManageRaces";
 
 // Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <OwnerLayout><OwnerDashboard /></OwnerLayout>,
+      },
+      {
+        path: "races",
+        element: <OwnerLayout><ManageRaces /></OwnerLayout>,
       },
       {
         path: "horses",

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { logout } from "../redux/features/userSlice";
 import api from "../config/axios";
 import { alertSuccess, alertFail } from "../assets/hook/useNotification";
@@ -28,11 +29,13 @@ const OwnerLayout = ({ children }) => {
     notes: "",
   });
 
+  const location = useLocation();
+
   const menuItems = [
-    { icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", active: true, badge: 4 },
-    { icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
-    { icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
-    { icon: <Wallet size={20}/>, label: "Quản Lý Ví" },
+    { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", badge: 4 },
+    { to: "/owner/jockey", icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
+    { to: "/owner/races", icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
+    { to: "/owner/wallet", icon: <Wallet size={20}/>, label: "Quản Lý Ví" },
   ];
 
   return (
@@ -50,7 +53,13 @@ const OwnerLayout = ({ children }) => {
         <nav className="flex-1 space-y-2 text-sm font-semibold">
           <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-2 pb-2">Owner Portal</p>
           {menuItems.map((item, idx) => (
-            <div key={idx} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${item.active ? "bg-[#D9A520]/10 text-[#D9A520] border border-[#D9A520]/20" : "hover:bg-white/5"}`}>
+            <div
+              key={idx}
+              role="button"
+              tabIndex={0}
+              onClick={() => item.to && navigate(item.to)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') item.to && navigate(item.to); }}
+              className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${((item.to === '/owner' && location.pathname === '/owner') || (item.to !== '/owner' && location.pathname.startsWith(item.to))) ? "bg-[#D9A520]/10 text-[#D9A520] border border-[#D9A520]/20" : "hover:bg-white/5"}`}>
               <div className="flex items-center space-x-3">
                 {item.icon}
                 <span>{item.label}</span>

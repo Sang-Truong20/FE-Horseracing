@@ -6,6 +6,11 @@ const OwnerDashboard = () => {
   const [horses, setHorses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  const filteredHorses = statusFilter === "All"
+    ? horses
+    : horses.filter((horse) => horse.status === statusFilter);
 
   const fetchHorses = async () => {
     setLoading(true);
@@ -44,10 +49,16 @@ const OwnerDashboard = () => {
                 </span>
             </div>
             
-            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-tighter">
-               <button className="bg-[#D9A520] text-black px-5 py-2.5 rounded-xl shadow-lg transition-all">Tất cả</button>
-               <button className="px-5 py-2.5 text-gray-500 hover:text-white transition-colors">Đang Thi Đấu</button>
-               <button className="px-5 py-2.5 text-gray-500 hover:text-white transition-colors">Nghỉ Ngơi</button>
+            <div className="flex flex-wrap gap-2 bg-black/50 p-1.5 rounded-2xl border border-white/5 text-[10px] font-black uppercase tracking-tighter">
+               {['All', 'Active', 'Resting', 'Injured', 'Retired', 'Banned'].map((status) => (
+                 <button
+                   key={status}
+                   onClick={() => setStatusFilter(status)}
+                   className={`px-5 py-2.5 rounded-xl transition-all ${statusFilter === status ? 'bg-[#D9A520] text-black shadow-lg' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                 >
+                   {status === 'All' ? 'Tất cả' : status}
+                 </button>
+               ))}
             </div>
          </div>
          
@@ -70,7 +81,7 @@ const OwnerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {horses.map((horse, idx) => (
+                  {filteredHorses.map((horse, idx) => (
                     <tr key={horse._id || idx} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="px-8 py-6">
                         <div className="flex items-center space-x-4">
