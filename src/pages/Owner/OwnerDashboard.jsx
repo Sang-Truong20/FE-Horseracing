@@ -7,25 +7,28 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchHorses = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await api.get("/api/owner/horses");
-        if (response.data?.status === "Success") {
-          setHorses(response.data.data || []);
-        } else {
-          setError(response.data?.message || "Không lấy được danh sách ngựa");
-        }
-      } catch (err) {
-        setError(err.response?.data?.message || err.message || "Lỗi khi gọi API");
-      } finally {
-        setLoading(false);
+  const fetchHorses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get("/api/owner/horses");
+      if (response.data?.status === "Success") {
+        setHorses(response.data.data || []);
+      } else {
+        setError(response.data?.message || "Không lấy được danh sách ngựa");
       }
-    };
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Lỗi khi gọi API");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchHorses();
+    const refresh = () => fetchHorses();
+    window.addEventListener("horseCreated", refresh);
+    return () => window.removeEventListener("horseCreated", refresh);
   }, []);
 
   return (

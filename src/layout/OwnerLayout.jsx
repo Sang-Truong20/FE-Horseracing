@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/features/userSlice";
+import api from "../config/axios";
+import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import { 
   LayoutDashboard, Users, ClipboardList, Wallet, 
   Trophy, Flame, DollarSign, LogOut, Search, Bell, PlusCircle
@@ -11,6 +13,20 @@ const OwnerLayout = ({ children }) => {
   const { user } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showAddHorseModal, setShowAddHorseModal] = useState(false);
+  const [creatingHorse, setCreatingHorse] = useState(false);
+  const [newHorse, setNewHorse] = useState({
+    name: "",
+    breed: "",
+    color: "",
+    gender: "",
+    dateOfBirth: "",
+    weightKg: "",
+    heightCm: "",
+    registrationNumber: "",
+    status: "Active",
+    notes: "",
+  });
 
   const menuItems = [
     { icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", active: true, badge: 4 },
@@ -102,7 +118,10 @@ const OwnerLayout = ({ children }) => {
                 <Bell size={20}/>
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
              </button>
-             <button className="flex items-center space-x-2 bg-[#D9A520] text-black font-black px-5 py-2.5 rounded-xl shadow-[0_5px_15px_rgba(217,165,32,0.2)] hover:opacity-90 transition-all text-xs uppercase tracking-tighter">
+             <button
+               onClick={() => setShowAddHorseModal(true)}
+               className="flex items-center space-x-2 bg-[#D9A520] text-black font-black px-5 py-2.5 rounded-xl shadow-[0_5px_15px_rgba(217,165,32,0.2)] hover:opacity-90 transition-all text-xs uppercase tracking-tighter"
+             >
                 <PlusCircle size={18}/>
                 <span>Thêm Ngựa Mới</span>
              </button>
@@ -113,9 +132,140 @@ const OwnerLayout = ({ children }) => {
         <div className="flex-1 overflow-y-auto p-10 space-y-8 scrollbar-hide">
            {children}
         </div>
+        {showAddHorseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+            <div className="w-full max-w-2xl rounded-[32px] bg-[#0B101A] border border-white/10 shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div>
+                  <h2 className="text-lg font-black text-white">Tạo ngựa mới</h2>
+                  <p className="text-xs text-gray-400">Nhập thông tin cơ bản để tạo ngựa mới cho owner.</p>
+                </div>
+                <button
+                  onClick={() => setShowAddHorseModal(false)}
+                  className="text-gray-400 hover:text-white"
+                >Đóng</button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    value={newHorse.name}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Tên ngựa"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    value={newHorse.breed}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, breed: e.target.value }))}
+                    placeholder="Giống loài"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    value={newHorse.color}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, color: e.target.value }))}
+                    placeholder="Màu sắc"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    value={newHorse.gender}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, gender: e.target.value }))}
+                    placeholder="Giới tính"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    type="date"
+                    value={newHorse.dateOfBirth}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    value={newHorse.registrationNumber}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, registrationNumber: e.target.value }))}
+                    placeholder="Mã đăng ký"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    type="number"
+                    value={newHorse.weightKg}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, weightKg: e.target.value }))}
+                    placeholder="Cân nặng (kg)"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                  <input
+                    type="number"
+                    value={newHorse.heightCm}
+                    onChange={(e) => setNewHorse((prev) => ({ ...prev, heightCm: e.target.value }))}
+                    placeholder="Chiều cao (cm)"
+                    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                  />
+                </div>
+                <textarea
+                  value={newHorse.notes}
+                  onChange={(e) => setNewHorse((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Ghi chú"
+                  rows={4}
+                  className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-[#04070C]">
+                <button
+                  onClick={() => setShowAddHorseModal(false)}
+                  className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:bg-white/5 transition-all"
+                >Hủy</button>
+                <button
+                  onClick={async () => {
+                    setCreatingHorse(true);
+                    try {
+                      const payload = {
+                        name: newHorse.name,
+                        breed: newHorse.breed,
+                        color: newHorse.color,
+                        gender: newHorse.gender,
+                        dateOfBirth: newHorse.dateOfBirth,
+                        weightKg: Number(newHorse.weightKg) || 0,
+                        heightCm: Number(newHorse.heightCm) || 0,
+                        registrationNumber: newHorse.registrationNumber,
+                        status: newHorse.status,
+                        notes: newHorse.notes,
+                      };
+                      const response = await api.post("/api/owner/horses", payload);
+                      if (response.data?.status === "Success") {
+                        alertSuccess(response.data?.message || "Tạo ngựa mới thành công");
+                        window.dispatchEvent(new Event("horseCreated"));
+                        setShowAddHorseModal(false);
+                        setNewHorse({
+                          name: "",
+                          breed: "",
+                          color: "",
+                          gender: "",
+                          dateOfBirth: "",
+                          weightKg: "",
+                          heightCm: "",
+                          registrationNumber: "",
+                          status: "Active",
+                          notes: "",
+                        });
+                      } else {
+                        alertFail(response.data?.message || "Tạo ngựa thất bại");
+                      }
+                    } catch (err) {
+                      alertFail(err.response?.data?.message || err.message || "Lỗi khi tạo ngựa");
+                    } finally {
+                      setCreatingHorse(false);
+                    }
+                  }}
+                  disabled={creatingHorse}
+                  className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black shadow-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {creatingHorse ? "Đang tạo..." : "Tạo ngựa mới"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
 };
+
 
 export default OwnerLayout;
