@@ -62,13 +62,7 @@ const OwnerLayout = ({ children }) => {
 
         {/* User Button (Góc dưới Sidebar) */}
         <div className="mt-auto border-t border-white/5 pt-6 space-y-4">
-           <div className="bg-gradient-to-br from-indigo-900/40 to-black p-4 rounded-2xl border border-indigo-500/20 relative overflow-hidden group">
-              <span className="text-[10px] text-[#D9A520] font-bold block mb-1">Pro Owner 👑</span>
-              <p className="text-[10px] text-gray-500 leading-tight">Nâng cấp để đăng ký không giới hạn cuộc đua</p>
-              <button className="mt-3 bg-[#D9A520] text-black text-[10px] font-black px-3 py-1.5 rounded-lg w-full">Nâng Cấp Ngay</button>
-           </div>
-
-           <div className="flex items-center justify-between group cursor-pointer bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-white/20 transition-all">
+           <div className="flex items-center justify-between group bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/20 transition-all">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
                    {user?.fullName?.charAt(0) || "U"}
@@ -78,7 +72,16 @@ const OwnerLayout = ({ children }) => {
                   <p className="text-[10px] text-gray-500 font-medium">Owner • VIP</p>
                 </div>
               </div>
-              <button onClick={() => dispatch(logout())} className="text-gray-600 hover:text-red-500"><LogOut size={16}/></button>
+              <button
+                onClick={() => {
+                  dispatch(logout());
+                  navigate("/login");
+                }}
+                className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-colors border border-white/10 px-3 py-2 rounded-xl"
+              >
+                <LogOut size={16} />
+                <span className="text-[10px] uppercase tracking-widest font-black">Logout</span>
+              </button>
            </div>
         </div>
       </aside>
