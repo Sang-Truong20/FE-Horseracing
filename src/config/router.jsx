@@ -8,6 +8,10 @@ import ManageHorses from "../pages/Owner/ManageHorses";
 import ManageRaces from "../pages/Owner/ManageRaces";
 import ManageJockeys from "../pages/Owner/ManageJockeys";
 import ManageWallet from "../pages/Owner/ManageWallet";
+import AdminDashboard from "../pages/Admin/AdminDashboard";
+import AdminUsers from "../pages/Admin/AdminUsers";
+import AdminOwners from "../pages/Admin/AdminOwners";
+import AdminJockeys from "../pages/Admin/AdminJockeys";
 
 // Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
@@ -49,6 +53,28 @@ export const router = createBrowserRouter([
       {
         path: "horses",
         element: <OwnerLayout><ManageHorses /></OwnerLayout>,
+      },
+    ],
+  },
+  {
+    path: "/admin",
+    element: <ProtectedRoute allowRole="Admin" />,
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />,
+      },
+      {
+        path: "users",
+        element: <AdminUsers />,
+      },
+      {
+        path: "owners",
+        element: <AdminOwners />,
+      },
+      {
+        path: "jockeys",
+        element: <AdminJockeys />,
       },
     ],
   },
