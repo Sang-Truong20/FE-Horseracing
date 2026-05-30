@@ -38,11 +38,13 @@ const Login = () => {
         // 1. Lưu vào Redux Store
         dispatch(loginSuccess({ user, token }));
 
-        // 2. Chuyển hướng (Dựa trên role OwnerHorse trong ảnh)
-        if (user.role === "OwnerHorse") {
+        // 2. Chuyển hướng dựa trên role
+        if (user.role === "Admin") {
+          navigate("/admin");
+        } else if (user.role === "OwnerHorse") {
           navigate("/owner");
         } else {
-          alert("Tài khoản của bạn không có quyền truy cập Owner Portal");
+          alert("Tài khoản của bạn không có quyền truy cập hệ thống");
         }
       } else {
         alert(response.data.message || "Đăng nhập thất bại!");

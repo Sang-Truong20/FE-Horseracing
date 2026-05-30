@@ -2,6 +2,15 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/features/userSlice";
 import { useNavigate } from "react-router-dom";
+import {
+  DashboardOutlined,
+  UserOutlined,
+  ShopOutlined,
+  IdcardOutlined,
+  BarChartOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+} from "@ant-design/icons";
 
 const AdminLayout = ({ children }) => {
   const dispatch = useDispatch();
@@ -30,9 +39,10 @@ const AdminLayout = ({ children }) => {
             </h3>
             <a
               href="/admin"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Dashboard
+              <DashboardOutlined className="text-lg" />
+              <span>Dashboard</span>
             </a>
           </div>
 
@@ -42,21 +52,24 @@ const AdminLayout = ({ children }) => {
             </h3>
             <a
               href="/admin/users"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Quản Lý Người Dùng
+              <UserOutlined className="text-lg" />
+              <span>Quản Lý Người Dùng</span>
             </a>
             <a
               href="/admin/owners"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Quản Lý Chủ Ngựa
+              <ShopOutlined className="text-lg" />
+              <span>Quản Lý Chủ Ngựa</span>
             </a>
             <a
               href="/admin/jockeys"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Cấp Phép Jockey
+              <IdcardOutlined className="text-lg" />
+              <span>Cấp Phép Jockey</span>
             </a>
           </div>
 
@@ -66,15 +79,17 @@ const AdminLayout = ({ children }) => {
             </h3>
             <a
               href="/admin/reports"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Báo Cáo & Thống Kê
+              <BarChartOutlined className="text-lg" />
+              <span>Báo Cáo & Thống Kê</span>
             </a>
             <a
               href="/admin/logs"
-              className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
             >
-              Nhật Ký Hoạt Động
+              <FileTextOutlined className="text-lg" />
+              <span>Nhật Ký Hoạt Động</span>
             </a>
           </div>
         </nav>
@@ -94,9 +109,10 @@ const AdminLayout = ({ children }) => {
           </div>
           <button
             onClick={handleLogout}
-            className="w-full px-3 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-lg transition"
+            className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-lg transition font-medium"
           >
-            Đăng Xuất
+            <LogoutOutlined />
+            <span>Đăng Xuất</span>
           </button>
         </div>
       </div>

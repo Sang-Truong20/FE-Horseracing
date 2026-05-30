@@ -24,7 +24,7 @@ const ProtectedRoute = ({ allowRole }) => {
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Navigate to="/owner" replace />,
+    element: <Navigate to="/login" replace />,
   },
   {
     path: "/login",
