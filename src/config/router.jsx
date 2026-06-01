@@ -12,6 +12,8 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUsers from "../pages/Admin/AdminUsers";
 import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
+import JockeyLayout from "../layout/JockeyLayout";
+import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 
 // Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
@@ -76,6 +78,18 @@ export const router = createBrowserRouter([
         path: "jockeys",
         element: <AdminJockeys />,
       },
+    ],
+  },
+  {
+    path: "/jockey",
+    element: <ProtectedRoute allowRole="Jockey" />,
+    children: [
+      {
+        index: true, // Route mặc định khi vào /jockey
+        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+      },
+      // Sau này bạn có thể thêm các route khác như:
+      // { path: "schedule", element: <JockeyLayout><JockeySchedule /></JockeyLayout> }
     ],
   },
   {

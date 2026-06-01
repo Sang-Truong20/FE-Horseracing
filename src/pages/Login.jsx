@@ -41,7 +41,9 @@ const Login = () => {
         // 2. Chuyển hướng dựa trên role
         if (user.role === "Admin") {
           navigate("/admin");
-        } else if (user.role === "OwnerHorse") {
+        }else if (user.role === "Jockey") {
+          navigate("/jockey"); 
+        }else if (user.role === "OwnerHorse") {
           navigate("/owner");
         } else {
           alert("Tài khoản của bạn không có quyền truy cập hệ thống");
