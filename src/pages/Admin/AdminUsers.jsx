@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
 import { SearchOutlined } from "@ant-design/icons";
-import { Modal, Form, Input, Select, Spin, Alert } from "antd";
+import { Modal, Form, Input, Select, Spin, Alert, message } from "antd";
 import { Eye, Edit, Trash2, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
 
@@ -93,9 +93,38 @@ const AdminUsers = () => {
   };
 
   const handleSaveEdit = async () => {
-    setIsEditModalVisible(false);
-    // TODO: call API PUT/PATCH to save user changes
-    alert("Cập nhật thông tin người dùng thành công!");
+    try {
+      const formValues = await form.validateFields();
+      const updateData = {
+        fullName: formValues.name,
+        phone: formValues.phone,
+        address: formValues.address,
+        status: formValues.status,
+      };
+
+      const response = await api.put(`${ADMIN_USERS_API}/${selectedUser.id}`, updateData);
+      
+      // Cập nhật users list
+      setUsers(
+        users.map((user) =>
+          user.id === selectedUser.id
+            ? {
+                ...user,
+                name: formValues.name,
+                phone: formValues.phone,
+                address: formValues.address,
+                status: formValues.status,
+              }
+            : user
+        )
+      );
+      
+      setIsEditModalVisible(false);
+      message.success("Cập nhật thông tin người dùng thành công!");
+    } catch (error) {
+      console.error("Update user error:", error);
+      message.error(error.response?.data?.message || "Cập nhật thất bại. Vui lòng thử lại.");
+    }
   };
 
   const handleDeleteUser = async (user) => {
@@ -217,12 +246,18 @@ const AdminUsers = () => {
                       paginatedUsers.map((user) => (
                         <tr key={user.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition">
                           <td className="px-6 py-4">
-                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center font-semibold text-white">
                                 {user.name?.split(" ").map((n) => n[0]).join("")}
                               </div>
-                              <div>
-                                <p className="font-semibold">{user.name}</p>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleEditUser(user)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleEditUser(user); }}
+                                className="cursor-pointer"
+                              >
+                                <p className="font-semibold text-gray-900 hover:underline">{user.name}</p>
                                 <p className="text-sm text-gray-400">{user.email}</p>
                               </div>
                             </div>
@@ -313,41 +348,44 @@ const AdminUsers = () => {
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
+        bodyStyle={{ backgroundColor: '#ffffff', color: '#111827', padding: '20px' }}
+        style={{ top: 20 }}
+        className="rounded-lg"
       >
         {selectedUser && (
-          <div className="space-y-4 text-gray-100">
+          <div className="space-y-4 text-gray-900">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-400">Tên</p>
-                <p className="font-semibold">{selectedUser.name}</p>
+                <p className="text-sm text-gray-600">Tên</p>
+                <p className="font-semibold text-gray-900">{selectedUser.name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Email</p>
-                <p className="font-semibold">{selectedUser.email}</p>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-semibold text-gray-900">{selectedUser.email}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Điện thoại</p>
-                <p className="font-semibold">{selectedUser.phone}</p>
+                <p className="text-sm text-gray-600">Điện thoại</p>
+                <p className="font-semibold text-gray-900">{selectedUser.phone}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Địa chỉ</p>
-                <p className="font-semibold">{selectedUser.address}</p>
+                <p className="text-sm text-gray-600">Địa chỉ</p>
+                <p className="font-semibold text-gray-900">{selectedUser.address}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Vai trò</p>
-                <p className="font-semibold">{selectedUser.role}</p>
+                <p className="text-sm text-gray-600">Vai trò</p>
+                <p className="font-semibold text-gray-900">{selectedUser.role}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Trạng thái</p>
-                <p className="font-semibold">{selectedUser.status}</p>
+                <p className="text-sm text-gray-600">Trạng thái</p>
+                <p className="font-semibold text-gray-900">{selectedUser.status}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Số dư ví</p>
-                <p className="font-semibold">₫{selectedUser.balance ?? 0}</p>
+                <p className="text-sm text-gray-600">Số dư ví</p>
+                <p className="font-semibold text-gray-900">₫{selectedUser.balance ?? 0}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Ngày tham gia</p>
-                <p className="font-semibold">{selectedUser.joinDate ?? selectedUser.createdAt ?? "-"}</p>
+                <p className="text-sm text-gray-600">Ngày tham gia</p>
+                <p className="font-semibold text-gray-900">{selectedUser.joinDate ?? selectedUser.createdAt ?? "-"}</p>
               </div>
             </div>
           </div>
@@ -355,31 +393,56 @@ const AdminUsers = () => {
       </Modal>
 
       <Modal
-        title={`Chỉnh sửa người dùng: ${selectedUser?.name}`}
+        title={`Chỉnh sửa người dùng: ${selectedUser?.name || 'Người dùng'}`}
         open={isEditModalVisible}
         onOk={handleSaveEdit}
         onCancel={() => setIsEditModalVisible(false)}
         okText="Lưu"
         cancelText="Hủy"
+        bodyStyle={{ backgroundColor: '#ffffff', color: '#111827', padding: '20px' }}
+        style={{ top: 20 }}
+        className="rounded-lg"
       >
-        <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item label="Tên" name="name">
-            <Input className="bg-gray-700 border-gray-600 text-white" />
+        <Form form={form} layout="vertical" className="mt-4 text-gray-900">
+          <Form.Item label={<span className="text-gray-700">Tên</span>} name="name">
+            <Input 
+              placeholder="Nhập tên" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+            />
           </Form.Item>
-          <Form.Item label="Email" name="email">
-            <Input type="email" className="bg-gray-700 border-gray-600 text-white" disabled />
+          <Form.Item label={<span className="text-gray-700">Email</span>} name="email">
+            <Input 
+              type="email" 
+              placeholder="Email" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+              disabled 
+            />
           </Form.Item>
-          <Form.Item label="Điện thoại" name="phone">
-            <Input className="bg-gray-700 border-gray-600 text-white" />
+          <Form.Item label={<span className="text-gray-700">Điện thoại</span>} name="phone">
+            <Input 
+              placeholder="Nhập số điện thoại" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+            />
           </Form.Item>
-          <Form.Item label="Địa chỉ" name="address">
-            <Input className="bg-gray-700 border-gray-600 text-white" />
+          <Form.Item label={<span className="text-gray-700">Địa chỉ</span>} name="address">
+            <Input 
+              placeholder="Nhập địa chỉ" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+            />
           </Form.Item>
-          <Form.Item label="Vai trò" name="role">
-            <Select options={[{ label: "Owner", value: "Owner" }, { label: "Jockey", value: "Jockey" }, { label: "Admin", value: "Admin" }]} />
+          <Form.Item label={<span className="text-gray-700">Vai trò</span>} name="role">
+            <Select 
+              placeholder="Chọn vai trò" 
+              options={[{ label: "Owner", value: "Owner" }, { label: "Jockey", value: "Jockey" }, { label: "Admin", value: "Admin" }]}
+              style={{ height: '40px', color: '#111827' }}
+            />
           </Form.Item>
-          <Form.Item label="Trạng thái" name="status">
-            <Select options={[{ label: "Hoạt Động", value: "Hoạt Động" }, { label: "Chờ Xác Minh", value: "Chờ Xác Minh" }, { label: "Bị Khóa", value: "Bị Khóa" }]} />
+          <Form.Item label={<span className="text-gray-700">Trạng thái</span>} name="status">
+            <Select 
+              placeholder="Chọn trạng thái" 
+              options={[{ label: "Hoạt Động", value: "Hoạt Động" }, { label: "Chờ Xác Minh", value: "Chờ Xác Minh" }, { label: "Bị Khóa", value: "Bị Khóa" }]}
+              style={{ height: '40px', color: '#111827' }}
+            />
           </Form.Item>
         </Form>
       </Modal>

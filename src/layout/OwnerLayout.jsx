@@ -191,12 +191,15 @@ const OwnerLayout = ({ children }) => {
                     placeholder="Màu sắc"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
                   />
-                  <input
+                  <select
                     value={newHorse.gender}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, gender: e.target.value }))}
-                    placeholder="Giới tính"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
-                  />
+                  >
+                    <option value="" className="text-gray-400">Chọn giới tính</option>
+                    <option value="Stallion">Stallion</option>
+                    <option value="Mare">Mare</option>
+                  </select>
                   <input
                     type="date"
                     value={newHorse.dateOfBirth}
