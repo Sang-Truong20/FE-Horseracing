@@ -1,12 +1,13 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/features/userSlice";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   DashboardOutlined,
   UserOutlined,
   ShopOutlined,
   IdcardOutlined,
+  FlagOutlined,
   BarChartOutlined,
   FileTextOutlined,
   LogoutOutlined,
@@ -21,6 +22,13 @@ const AdminLayout = ({ children }) => {
     dispatch(logout());
     navigate("/login");
   };
+
+  const navLinkClass = ({ isActive }) =>
+    `flex items-center space-x-3 px-4 py-2 rounded-lg transition ${
+      isActive
+        ? "bg-purple-600 text-white shadow-lg shadow-purple-900/30"
+        : "text-gray-300 hover:bg-purple-500/20 hover:text-white"
+    }`;
 
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100">
@@ -37,60 +45,68 @@ const AdminLayout = ({ children }) => {
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
               Dashboard
             </h3>
-            <a
-              href="/admin"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            <NavLink
+              to="/admin"
+              end
+              className={navLinkClass}
             >
               <DashboardOutlined className="text-lg" />
               <span>Dashboard</span>
-            </a>
+            </NavLink>
           </div>
 
           <div className="px-4 py-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
               Quản Lý
             </h3>
-            <a
-              href="/admin/users"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            <NavLink
+              to="/admin/users"
+              className={navLinkClass}
             >
               <UserOutlined className="text-lg" />
               <span>Quản Lý Người Dùng</span>
-            </a>
-            <a
-              href="/admin/owners"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            </NavLink>
+            <NavLink
+              to="/admin/owners"
+              className={navLinkClass}
             >
               <ShopOutlined className="text-lg" />
               <span>Quản Lý Chủ Ngựa</span>
-            </a>
-            <a
-              href="/admin/jockeys"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            </NavLink>
+            <NavLink
+              to="/admin/jockeys"
+              className={navLinkClass}
             >
               <IdcardOutlined className="text-lg" />
               <span>Cấp Phép Jockey</span>
-            </a>
+            </NavLink>
+            <NavLink
+              to="/admin/races"
+              className={navLinkClass}
+            >
+              <FlagOutlined className="text-lg" />
+              <span>Quản Lý Cuộc Đua</span>
+            </NavLink>
           </div>
 
           <div className="px-4 py-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
               HỆ THỐNG
             </h3>
-            <a
-              href="/admin/reports"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            <NavLink
+              to="/admin/reports"
+              className={navLinkClass}
             >
               <BarChartOutlined className="text-lg" />
               <span>Báo Cáo & Thống Kê</span>
-            </a>
-            <a
-              href="/admin/logs"
-              className="flex items-center space-x-3 px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white transition"
+            </NavLink>
+            <NavLink
+              to="/admin/logs"
+              className={navLinkClass}
             >
               <FileTextOutlined className="text-lg" />
               <span>Nhật Ký Hoạt Động</span>
-            </a>
+            </NavLink>
           </div>
         </nav>
 

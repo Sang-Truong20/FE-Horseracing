@@ -12,6 +12,7 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUsers from "../pages/Admin/AdminUsers";
 import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
+import AdminRaces from "../pages/Admin/AdminRaces";
 
 // Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
       {
         path: "jockeys",
         element: <AdminJockeys />,
+      },
+      {
+        path: "races",
+        element: <AdminRaces />,
       },
     ],
   },
