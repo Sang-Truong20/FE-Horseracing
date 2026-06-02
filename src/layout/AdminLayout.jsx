@@ -8,6 +8,7 @@ import {
   ShopOutlined,
   IdcardOutlined,
   FlagOutlined,
+  GiftOutlined,
   BarChartOutlined,
   FileTextOutlined,
   LogoutOutlined,
@@ -86,6 +87,13 @@ const AdminLayout = ({ children }) => {
             >
               <FlagOutlined className="text-lg" />
               <span>Quản Lý Cuộc Đua</span>
+            </NavLink>
+            <NavLink
+              to="/admin/gifts"
+              className={navLinkClass}
+            >
+              <GiftOutlined className="text-lg" />
+              <span>Quà Tặng</span>
             </NavLink>
           </div>
 
