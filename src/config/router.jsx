@@ -100,6 +100,21 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: "/jockey",
+    element: <ProtectedRoute allowRole="Jockey" />,
+    children: [
+      {
+        index: true,
+        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+      },
+      // THÊM ROUTE NÀY:
+      {
+        path: "horses",
+        element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
+      }
+    ],
+  },
+  {
     path: "*",
     element: <Navigate to="/login" replace />,
   },
