@@ -2,17 +2,29 @@ import React, { useEffect, useState } from "react";
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
 
+const ADMIN_USERS_API = "/api/admin/users";
+
+const normalizeUser = (user) => ({
+  ...user,
+  id: user._id,
+});
+
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterRole, setFilterRole] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterHasLicense, setFilterHasLicense] = useState("all");
   const itemsPerPage = 10;
 
   const getRoleBadge = (role) => {
     const badges = {
       Owner: "bg-purple-500/20 text-purple-300",
+      OwnerHorse: "bg-purple-500/20 text-purple-300",
       Jockey: "bg-blue-500/20 text-blue-300",
+      EndUser: "bg-emerald-500/20 text-emerald-300",
       Admin: "bg-red-500/20 text-red-300",
     };
     return badges[role] || "bg-gray-500/20 text-gray-300";
@@ -20,9 +32,10 @@ const UserList = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      "Hoạt Động": "bg-green-500/20 text-green-300",
-      "Chờ Xác Minh": "bg-yellow-500/20 text-yellow-300",
-      "Bị Khóa": "bg-red-500/20 text-red-300",
+      Active: "bg-green-500/20 text-green-300",
+      Pending: "bg-yellow-500/20 text-yellow-300",
+      Blocked: "bg-red-500/20 text-red-300",
+      Inactive: "bg-red-500/20 text-red-300",
     };
     return badges[status] || "bg-gray-500/20 text-gray-300";
   };
@@ -31,12 +44,17 @@ const UserList = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get("/api/admin/users");
+      const params = {};
+      if (filterRole !== "all") params.role = filterRole;
+      if (filterStatus !== "all") params.status = filterStatus;
+      if (filterHasLicense !== "all") params.hasLicense = filterHasLicense === "true";
+
+      const response = await api.get(ADMIN_USERS_API, { params });
       const payload = response.data?.data ?? response.data ?? [];
       const resolvedUsers = Array.isArray(payload)
         ? payload
         : payload.users ?? payload.items ?? [];
-      setUsers(resolvedUsers);
+      setUsers(resolvedUsers.map(normalizeUser));
     } catch (fetchError) {
       console.error("Fetch users error:", fetchError);
       setError("Không thể tải danh sách người dùng.");
@@ -48,7 +66,7 @@ const UserList = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [filterRole, filterStatus, filterHasLicense]);
 
   const paginatedUsers = users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const totalPages = Math.max(1, Math.ceil(users.length / itemsPerPage));
@@ -61,6 +79,49 @@ const UserList = () => {
             <h2 className="text-xl font-bold">Danh Sách Người Dùng</h2>
             <p className="text-sm text-gray-400">{users.length} người dùng</p>
           </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <select
+            value={filterRole}
+            onChange={(e) => {
+              setFilterRole(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+          >
+            <option value="all">Tất cả vai trò</option>
+            <option value="Owner">Owner</option>
+            <option value="OwnerHorse">OwnerHorse</option>
+            <option value="Jockey">Jockey</option>
+            <option value="EndUser">EndUser</option>
+            <option value="Admin">Admin</option>
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+            <option value="Blocked">Blocked</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+          <select
+            value={filterHasLicense}
+            onChange={(e) => {
+              setFilterHasLicense(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+          >
+            <option value="all">Tất cả giấy phép</option>
+            <option value="true">Đã có giấy phép</option>
+            <option value="false">Chưa có giấy phép</option>
+          </select>
         </div>
       </div>
 
@@ -89,10 +150,10 @@ const UserList = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center font-semibold text-white">
-                            {user.name?.split(" ").map((n) => n[0]).join("")}
+                            {(user.fullName || user.username || "U").split(" ").map((n) => n[0]).join("")}
                           </div>
                           <div>
-                            <p className="font-semibold">{user.name}</p>
+                            <p className="font-semibold">{user.fullName || "-"}</p>
                             <p className="text-sm text-gray-400">{user.email}</p>
                           </div>
                         </div>
@@ -107,8 +168,8 @@ const UserList = () => {
                           {user.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-400">{user.createdAt ?? user.date ?? "-"}</td>
-                      <td className="px-6 py-4 text-sm font-semibold">₫{user.balance ?? 0}</td>
+                      <td className="px-6 py-4 text-sm text-gray-400">{user.createdAt || "-"}</td>
+                      <td className="px-6 py-4 text-sm font-semibold">₫{user.walletBalance ?? 0}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <button className="p-2 hover:bg-gray-600 rounded-lg transition text-blue-400" title="Xem chi tiết">

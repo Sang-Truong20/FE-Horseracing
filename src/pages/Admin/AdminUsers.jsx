@@ -7,10 +7,16 @@ import api from "../../config/axios";
 
 const ADMIN_USERS_API = "/api/admin/users";
 
+const normalizeUser = (user) => ({
+  ...user,
+  id: user._id,
+});
+
 const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterHasLicense, setFilterHasLicense] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -27,12 +33,13 @@ const AdminUsers = () => {
       const params = {};
       if (filterRole !== "all") params.role = filterRole;
       if (filterStatus !== "all") params.status = filterStatus;
+      if (filterHasLicense !== "all") params.hasLicense = filterHasLicense === "true";
       const response = await api.get(ADMIN_USERS_API, { params });
       const payload = response.data?.data ?? response.data ?? [];
       const resolvedUsers = Array.isArray(payload)
         ? payload
         : payload.users ?? payload.items ?? [];
-      setUsers(resolvedUsers);
+      setUsers(resolvedUsers.map(normalizeUser));
     } catch (fetchError) {
       console.error("Fetch users error:", fetchError);
       setError("Không thể tải danh sách người dùng. Vui lòng thử lại.");
@@ -44,10 +51,10 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [filterRole, filterStatus]);
+  }, [filterRole, filterStatus, filterHasLicense]);
 
   const filteredUsers = users.filter((user) => {
-    const searchString = `${user.name ?? ""} ${user.email ?? ""}`.toLowerCase();
+    const searchString = `${user.fullName ?? ""} ${user.username ?? ""} ${user.email ?? ""}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
 
@@ -59,7 +66,9 @@ const AdminUsers = () => {
   const getRoleBadge = (role) => {
     const badges = {
       Owner: "bg-purple-500/20 text-purple-300",
+      OwnerHorse: "bg-purple-500/20 text-purple-300",
       Jockey: "bg-blue-500/20 text-blue-300",
+      EndUser: "bg-emerald-500/20 text-emerald-300",
       Admin: "bg-red-500/20 text-red-300",
     };
     return badges[role] || "bg-gray-500/20 text-gray-300";
@@ -68,8 +77,12 @@ const AdminUsers = () => {
   const getStatusBadge = (status) => {
     const badges = {
       "Hoạt Động": "bg-green-500/20 text-green-300",
+      Active: "bg-green-500/20 text-green-300",
       "Chờ Xác Minh": "bg-yellow-500/20 text-yellow-300",
+      Pending: "bg-yellow-500/20 text-yellow-300",
       "Bị Khóa": "bg-red-500/20 text-red-300",
+      Blocked: "bg-red-500/20 text-red-300",
+      Inactive: "bg-red-500/20 text-red-300",
     };
     return badges[status] || "bg-gray-500/20 text-gray-300";
   };
@@ -82,12 +95,14 @@ const AdminUsers = () => {
   const handleEditUser = (user) => {
     setSelectedUser(user);
     form.setFieldsValue({
-      name: user.name,
+      fullName: user.fullName,
       email: user.email,
-      phone: user.phone,
-      address: user.address,
+      username: user.username,
       role: user.role,
       status: user.status,
+      isVerified: user.isVerified,
+      membershipLevel: user.membershipLevel,
+      points: user.points,
     });
     setIsEditModalVisible(true);
   };
@@ -96,30 +111,31 @@ const AdminUsers = () => {
     try {
       const formValues = await form.validateFields();
       const updateData = {
-        fullName: formValues.name,
-        phone: formValues.phone,
-        address: formValues.address,
+        fullName: formValues.fullName,
+        role: formValues.role,
         status: formValues.status,
+        isVerified: formValues.isVerified,
+        membershipLevel: formValues.membershipLevel,
+        points: Number(formValues.points ?? 0),
       };
 
       const response = await api.put(`${ADMIN_USERS_API}/${selectedUser.id}`, updateData);
+      const updatedUser = normalizeUser(response.data?.data ?? response.data ?? {
+        ...selectedUser,
+        ...updateData,
+      });
       
       // Cập nhật users list
       setUsers(
         users.map((user) =>
           user.id === selectedUser.id
-            ? {
-                ...user,
-                name: formValues.name,
-                phone: formValues.phone,
-                address: formValues.address,
-                status: formValues.status,
-              }
+            ? updatedUser
             : user
         )
       );
       
       setIsEditModalVisible(false);
+      setSelectedUser(updatedUser);
       message.success("Cập nhật thông tin người dùng thành công!");
     } catch (error) {
       console.error("Update user error:", error);
@@ -128,7 +144,7 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = async (user) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.name}" không?`)) {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`)) {
       // TODO: call API delete
       alert("Xóa người dùng thành công!");
     }
@@ -136,7 +152,7 @@ const AdminUsers = () => {
 
   const handleLockUser = async (user) => {
     // TODO: call API lock/unlock account
-    alert(`Khóa/Mở khóa tài khoản "${user.name}" thành công!`);
+    alert(`Khóa/Mở khóa tài khoản "${user.fullName}" thành công!`);
   };
 
   return (
@@ -147,7 +163,7 @@ const AdminUsers = () => {
           <p className="text-gray-400 mt-2">Quản lý toàn bộ người dùng trong hệ thống</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Tìm kiếm</label>
             <div className="relative">
@@ -177,7 +193,9 @@ const AdminUsers = () => {
             >
               <option value="all">Tất cả</option>
               <option value="Owner">Owner</option>
+              <option value="OwnerHorse">OwnerHorse</option>
               <option value="Jockey">Jockey</option>
+              <option value="EndUser">EndUser</option>
               <option value="Admin">Admin</option>
             </select>
           </div>
@@ -193,9 +211,26 @@ const AdminUsers = () => {
               className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
             >
               <option value="all">Tất cả</option>
-              <option value="Hoạt Động">Hoạt Động</option>
-              <option value="Chờ Xác Minh">Chờ Xác Minh</option>
-              <option value="Bị Khóa">Bị Khóa</option>
+              <option value="Active">Active</option>
+              <option value="Pending">Pending</option>
+              <option value="Blocked">Blocked</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Giấy phép</label>
+            <select
+              value={filterHasLicense}
+              onChange={(e) => {
+                setFilterHasLicense(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+            >
+              <option value="all">Tất cả</option>
+              <option value="true">Đã có giấy phép</option>
+              <option value="false">Chưa có giấy phép</option>
             </select>
           </div>
 
@@ -206,6 +241,7 @@ const AdminUsers = () => {
                 setSearchTerm("");
                 setFilterRole("all");
                 setFilterStatus("all");
+                setFilterHasLicense("all");
                 setCurrentPage(1);
               }}
               className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition font-medium"
@@ -234,11 +270,12 @@ const AdminUsers = () => {
                   <thead className="bg-gray-700/50 border-b border-gray-700">
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">NGƯỜI DÙNG</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">VAI TRÒ</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">TRẠNG THÁI</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">NGÀY THAM GIA</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">SỐ DƯ VÍ</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">THAO TÁC</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">VAI TRÒ</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">TRẠNG THÁI</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">XÁC MINH</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">NGÀY THAM GIA</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">SỐ DƯ VÍ</th>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">THAO TÁC</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -248,7 +285,7 @@ const AdminUsers = () => {
                           <td className="px-6 py-4">
                               <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center font-semibold text-white">
-                                {user.name?.split(" ").map((n) => n[0]).join("")}
+                                {(user.fullName || user.username || "U").split(" ").map((n) => n[0]).join("")}
                               </div>
                               <div
                                 role="button"
@@ -257,8 +294,9 @@ const AdminUsers = () => {
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleEditUser(user); }}
                                 className="cursor-pointer"
                               >
-                                <p className="font-semibold text-gray-900 hover:underline">{user.name}</p>
+                                <p className="font-semibold text-white hover:underline">{user.fullName || "-"}</p>
                                 <p className="text-sm text-gray-400">{user.email}</p>
+                                <p className="text-xs text-gray-500">@{user.username || "-"}</p>
                               </div>
                             </div>
                           </td>
@@ -272,8 +310,13 @@ const AdminUsers = () => {
                               {user.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-400">{user.joinDate || user.createdAt || "-"}</td>
-                          <td className="px-6 py-4 text-sm font-semibold">₫{user.balance ?? 0}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.isVerified ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300"}`}>
+                              {user.isVerified ? "Đã xác minh" : "Chưa xác minh"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-400">{user.createdAt || "-"}</td>
+                          <td className="px-6 py-4 text-sm font-semibold">₫{user.walletBalance ?? 0}</td>
                           <td className="px-6 py-4">
                             <div className="flex items-center space-x-2">
                               <button onClick={() => handleViewUser(user)} className="p-2 hover:bg-gray-600 rounded-lg transition text-blue-400" title="Xem chi tiết">
@@ -294,7 +337,7 @@ const AdminUsers = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+                        <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                           Không tìm thấy người dùng nào
                         </td>
                       </tr>
@@ -344,7 +387,7 @@ const AdminUsers = () => {
       </div>
 
       <Modal
-        title={`Chi tiết người dùng: ${selectedUser?.name}`}
+        title={`Chi tiết người dùng: ${selectedUser?.fullName || selectedUser?.username || "Người dùng"}`}
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
@@ -356,20 +399,20 @@ const AdminUsers = () => {
           <div className="space-y-4 text-gray-900">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Tên</p>
-                <p className="font-semibold text-gray-900">{selectedUser.name}</p>
+                <p className="text-sm text-gray-600">Họ tên</p>
+                <p className="font-semibold text-gray-900">{selectedUser.fullName || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Username</p>
+                <p className="font-semibold text-gray-900">{selectedUser.username || "-"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-semibold text-gray-900">{selectedUser.email}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Điện thoại</p>
-                <p className="font-semibold text-gray-900">{selectedUser.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Địa chỉ</p>
-                <p className="font-semibold text-gray-900">{selectedUser.address}</p>
+                <p className="text-sm text-gray-600">Provider</p>
+                <p className="font-semibold text-gray-900">{selectedUser.authProvider || "-"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Vai trò</p>
@@ -380,12 +423,24 @@ const AdminUsers = () => {
                 <p className="font-semibold text-gray-900">{selectedUser.status}</p>
               </div>
               <div>
+                <p className="text-sm text-gray-600">Xác minh</p>
+                <p className="font-semibold text-gray-900">{selectedUser.isVerified ? "Đã xác minh" : "Chưa xác minh"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Membership</p>
+                <p className="font-semibold text-gray-900">{selectedUser.membershipLevel || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Điểm</p>
+                <p className="font-semibold text-gray-900">{selectedUser.points ?? 0}</p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-600">Số dư ví</p>
-                <p className="font-semibold text-gray-900">₫{selectedUser.balance ?? 0}</p>
+                <p className="font-semibold text-gray-900">₫{selectedUser.walletBalance ?? 0}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Ngày tham gia</p>
-                <p className="font-semibold text-gray-900">{selectedUser.joinDate ?? selectedUser.createdAt ?? "-"}</p>
+                <p className="font-semibold text-gray-900">{selectedUser.createdAt || "-"}</p>
               </div>
             </div>
           </div>
@@ -393,7 +448,7 @@ const AdminUsers = () => {
       </Modal>
 
       <Modal
-        title={`Chỉnh sửa người dùng: ${selectedUser?.name || 'Người dùng'}`}
+        title={`Chỉnh sửa người dùng: ${selectedUser?.fullName || selectedUser?.username || 'Người dùng'}`}
         open={isEditModalVisible}
         onOk={handleSaveEdit}
         onCancel={() => setIsEditModalVisible(false)}
@@ -404,10 +459,17 @@ const AdminUsers = () => {
         className="rounded-lg"
       >
         <Form form={form} layout="vertical" className="mt-4 text-gray-900">
-          <Form.Item label={<span className="text-gray-700">Tên</span>} name="name">
+          <Form.Item label={<span className="text-gray-700">Họ tên</span>} name="fullName">
             <Input 
               placeholder="Nhập tên" 
               style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+            />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Username</span>} name="username">
+            <Input 
+              placeholder="Username" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
+              disabled 
             />
           </Form.Item>
           <Form.Item label={<span className="text-gray-700">Email</span>} name="email">
@@ -418,30 +480,55 @@ const AdminUsers = () => {
               disabled 
             />
           </Form.Item>
-          <Form.Item label={<span className="text-gray-700">Điện thoại</span>} name="phone">
-            <Input 
-              placeholder="Nhập số điện thoại" 
-              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
-            />
-          </Form.Item>
-          <Form.Item label={<span className="text-gray-700">Địa chỉ</span>} name="address">
-            <Input 
-              placeholder="Nhập địa chỉ" 
-              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
-            />
-          </Form.Item>
           <Form.Item label={<span className="text-gray-700">Vai trò</span>} name="role">
             <Select 
               placeholder="Chọn vai trò" 
-              options={[{ label: "Owner", value: "Owner" }, { label: "Jockey", value: "Jockey" }, { label: "Admin", value: "Admin" }]}
+              options={[
+                { label: "EndUser", value: "EndUser" },
+                { label: "Owner", value: "Owner" },
+                { label: "OwnerHorse", value: "OwnerHorse" },
+                { label: "Jockey", value: "Jockey" },
+                { label: "Admin", value: "Admin" },
+              ]}
               style={{ height: '40px', color: '#111827' }}
             />
           </Form.Item>
           <Form.Item label={<span className="text-gray-700">Trạng thái</span>} name="status">
             <Select 
               placeholder="Chọn trạng thái" 
-              options={[{ label: "Hoạt Động", value: "Hoạt Động" }, { label: "Chờ Xác Minh", value: "Chờ Xác Minh" }, { label: "Bị Khóa", value: "Bị Khóa" }]}
+              options={[
+                { label: "Active", value: "Active" },
+                { label: "Pending", value: "Pending" },
+                { label: "Blocked", value: "Blocked" },
+                { label: "Inactive", value: "Inactive" },
+              ]}
               style={{ height: '40px', color: '#111827' }}
+            />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Xác minh</span>} name="isVerified">
+            <Select 
+              placeholder="Chọn trạng thái xác minh" 
+              options={[{ label: "Đã xác minh", value: true }, { label: "Chưa xác minh", value: false }]}
+              style={{ height: '40px', color: '#111827' }}
+            />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Membership</span>} name="membershipLevel">
+            <Select 
+              placeholder="Chọn membership" 
+              options={[
+                { label: "Bronze", value: "Bronze" },
+                { label: "Silver", value: "Silver" },
+                { label: "Gold", value: "Gold" },
+                { label: "Platinum", value: "Platinum" },
+              ]}
+              style={{ height: '40px', color: '#111827' }}
+            />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Điểm</span>} name="points">
+            <Input 
+              type="number" 
+              placeholder="Nhập điểm" 
+              style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
             />
           </Form.Item>
         </Form>

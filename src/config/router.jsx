@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "../pages/Login";
-// ĐẢM BẢO ĐÃ IMPORT CÁC FILE NÀY
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
@@ -12,11 +11,11 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUsers from "../pages/Admin/AdminUsers";
 import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
+import AdminRaces from "../pages/Admin/AdminRaces";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
 
-// Component bảo vệ route
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -79,6 +78,25 @@ export const router = createBrowserRouter([
         path: "jockeys",
         element: <AdminJockeys />,
       },
+      {
+        path: "races",
+        element: <AdminRaces />,
+      },
+    ],
+  },
+  {
+    path: "/jockey",
+    element: <ProtectedRoute allowRole="Jockey" />,
+    children: [
+      {
+        index: true,
+        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+      },
+      // THÊM ROUTE NÀY:
+      {
+        path: "horses",
+        element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
+      }
     ],
   },
   {
