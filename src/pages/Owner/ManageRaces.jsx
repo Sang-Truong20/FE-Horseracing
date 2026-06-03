@@ -11,8 +11,7 @@ const ManageRaces = () => {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [selectedRace, setSelectedRace] = useState(null);
   const [ownerHorses, setOwnerHorses] = useState([]);
-  const [jockeys, setJockeys] = useState([]);
-  const [form, setForm] = useState({ horseId: "", jockeyId: "", hireFee: "", jockeyBonusPercent: "" });
+  const [form, setForm] = useState({ horseId: "", hireFee: "", jockeyBonusPercent: "" });
 
   const fetchRaces = async (s) => {
     setLoading(true);
@@ -34,7 +33,6 @@ const ManageRaces = () => {
 
   useEffect(() => {
     fetchRaces(status);
-    // fetch owner's horses and available jockeys for register form
     const fetchOwnerHorses = async () => {
       try {
         const res = await api.get("/api/owner/horses");
@@ -43,16 +41,7 @@ const ManageRaces = () => {
         // ignore
       }
     };
-    const fetchJockeys = async () => {
-      try {
-        const res = await api.get("/api/owner/jockeys");
-        if (res.data?.status === "Success") setJockeys(res.data.data || []);
-      } catch (e) {
-        // ignore
-      }
-    };
     fetchOwnerHorses();
-    fetchJockeys();
   }, [status]);
 
   return (
@@ -107,7 +96,7 @@ const ManageRaces = () => {
                         <button
                           onClick={() => {
                             setSelectedRace(race);
-                            setForm({ horseId: ownerHorses[0]?._id || "", jockeyId: "", hireFee: "", jockeyBonusPercent: "" });
+                            setForm({ horseId: ownerHorses[0]?._id || "", hireFee: "", jockeyBonusPercent: "" });
                             setShowRegisterModal(true);
                           }}
                           className="px-3 py-2 bg-[#D9A520] text-black rounded-xl font-black text-xs"
@@ -131,36 +120,31 @@ const ManageRaces = () => {
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="text-[10px] text-gray-400">Chọn ngựa</label>
-              <select value={form.horseId} onChange={(e)=>setForm(f=>({...f, horseId:e.target.value}))} className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white">
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black md:col-span-2">Chọn ngựa</label>
+              <select value={form.horseId} onChange={(e)=>setForm(f=>({...f, horseId:e.target.value}))} className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white md:col-span-2">
+                <option value="">-- Chọn ngựa --</option>
                 {ownerHorses.map(h=> <option key={h._id} value={h._id}>{h.name}</option>)}
               </select>
 
-              <label className="text-[10px] text-gray-400">Chọn Jockey</label>
-              <select value={form.jockeyId} onChange={(e)=>setForm(f=>({...f,jockeyId:e.target.value}))} className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white">
-                <option value="">-- Chọn jockey --</option>
-                {jockeys.map(j => (
-                  <option key={j._id} value={j._id}>{j.fullName || j.username || j.licenseNumber || j._id}</option>
-                ))}
-              </select>
-
-              <label className="text-[10px] text-gray-400">Hire Fee</label>
-              <input type="number" value={form.hireFee} onChange={(e)=>setForm(f=>({...f,hireFee:e.target.value}))} placeholder="hireFee" className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white" />
-
-              <label className="text-[10px] text-gray-400">Jockey Bonus %</label>
-              <input type="number" value={form.jockeyBonusPercent} onChange={(e)=>setForm(f=>({...f,jockeyBonusPercent:e.target.value}))} placeholder="jockeyBonusPercent" className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white" />
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Hire Fee</label>
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Jockey Bonus %</label>
+              <input type="number" value={form.hireFee} onChange={(e)=>setForm(f=>({...f,hireFee:e.target.value}))} placeholder="500000" className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white" />
+              <input type="number" value={form.jockeyBonusPercent} onChange={(e)=>setForm(f=>({...f,jockeyBonusPercent:e.target.value}))} placeholder="10" className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white" />
             </div>
           </div>
           <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-[#04070C]">
             <button onClick={()=>setShowRegisterModal(false)} className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:bg-white/5">Hủy</button>
             <button
               onClick={async ()=>{
+                if (!form.horseId) {
+                  alertFail('Vui lòng chọn ngựa');
+                  return;
+                }
                 try{
                   const payload = {
                     horseId: form.horseId,
-                    jockeyId: form.jockeyId,
-                    hireFee: Number(form.hireFee)||0,
-                    jockeyBonusPercent: Number(form.jockeyBonusPercent)||0,
+                    hireFee: Number(form.hireFee) || 0,
+                    jockeyBonusPercent: Number(form.jockeyBonusPercent) || 0,
                   };
                   const res = await api.post(`/api/owner/races/${selectedRace._id}/register`, payload);
                   if(res.data?.status === 'Success' || res.status===201){

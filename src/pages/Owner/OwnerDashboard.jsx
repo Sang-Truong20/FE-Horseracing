@@ -1,12 +1,91 @@
 import React, { useEffect, useState } from "react";
 import { Trophy, MoreHorizontal, Eye, Edit3, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
+import { alertSuccess, alertFail } from "../../assets/hook/useNotification";
+
+const initialHorseForm = {
+  name: "",
+  breed: "",
+  color: "",
+  gender: "",
+  dateOfBirth: "",
+  weightKg: "",
+  heightCm: "",
+  registrationNumber: "",
+  status: "Active",
+  notes: "",
+};
+
+const editableFields = [
+  "name",
+  "breed",
+  "color",
+  "gender",
+  "dateOfBirth",
+  "weightKg",
+  "heightCm",
+  "registrationNumber",
+  "status",
+  "notes",
+];
+
+const detailFields = [
+  { key: "name", label: "Tên ngựa" },
+  { key: "breed", label: "Giống loài" },
+  { key: "color", label: "Màu sắc" },
+  { key: "gender", label: "Giới tính" },
+  { key: "dateOfBirth", label: "Ngày sinh" },
+  { key: "weightKg", label: "Cân nặng (kg)" },
+  { key: "heightCm", label: "Chiều cao (cm)" },
+  { key: "registrationNumber", label: "Mã đăng ký" },
+  { key: "status", label: "Trạng thái" },
+  { key: "notes", label: "Ghi chú" },
+];
+
+const toDateInputValue = (value) => {
+  if (!value) return "";
+  return value.split("T")[0];
+};
+
+const mapHorseToForm = (horse) => ({
+  name: horse.name || "",
+  breed: horse.breed || "",
+  color: horse.color || "",
+  gender: horse.gender || "",
+  dateOfBirth: toDateInputValue(horse.dateOfBirth),
+  weightKg: horse.weightKg ?? "",
+  heightCm: horse.heightCm ?? "",
+  registrationNumber: horse.registrationNumber || "",
+  status: horse.status || "Active",
+  notes: horse.notes || "",
+});
+
+const buildHorsePayload = (form) =>
+  editableFields.reduce((payload, field) => {
+    payload[field] = ["weightKg", "heightCm"].includes(field)
+      ? Number(form[field]) || 0
+      : form[field];
+    return payload;
+  }, {});
+
+const formatHorseDetailValue = (key, value) => {
+  if (!value && value !== 0) return "-";
+  if (key === "dateOfBirth") return toDateInputValue(value);
+  return value;
+};
 
 const OwnerDashboard = () => {
   const [horses, setHorses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [selectedHorseId, setSelectedHorseId] = useState(null);
+  const [selectedHorseDetail, setSelectedHorseDetail] = useState(null);
+  const [horseForm, setHorseForm] = useState(initialHorseForm);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const filteredHorses = statusFilter === "All"
     ? horses
@@ -33,8 +112,74 @@ const OwnerDashboard = () => {
     fetchHorses();
     const refresh = () => fetchHorses();
     window.addEventListener("horseCreated", refresh);
-    return () => window.removeEventListener("horseCreated", refresh);
+    window.addEventListener("horseUpdated", refresh);
+    return () => {
+      window.removeEventListener("horseCreated", refresh);
+      window.removeEventListener("horseUpdated", refresh);
+    };
   }, []);
+
+  const fetchHorseDetail = async (horseId) => {
+    const response = await api.get(`/api/owner/horses/${horseId}`);
+    if (response.data?.status !== "Success") {
+      throw new Error(response.data?.message || "Không lấy được chi tiết ngựa");
+    }
+    return response.data.data || {};
+  };
+
+  const handleOpenDetail = async (horseId) => {
+    setSelectedHorseId(horseId);
+    setShowDetailModal(true);
+    setLoadingDetail(true);
+    setSelectedHorseDetail(null);
+    try {
+      const horseDetail = await fetchHorseDetail(horseId);
+      setSelectedHorseDetail(horseDetail);
+    } catch (err) {
+      alertFail(err.response?.data?.message || err.message || "Lỗi khi lấy chi tiết ngựa");
+      setShowDetailModal(false);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleOpenEdit = async (horseId) => {
+    setSelectedHorseId(horseId);
+    setShowEditModal(true);
+    setLoadingDetail(true);
+    setHorseForm(initialHorseForm);
+    try {
+      const horseDetail = await fetchHorseDetail(horseId);
+      setHorseForm(mapHorseToForm(horseDetail));
+    } catch (err) {
+      alertFail(err.response?.data?.message || err.message || "Lỗi khi lấy chi tiết ngựa");
+      setShowEditModal(false);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleUpdateHorse = async () => {
+    if (!selectedHorseId) return;
+    setUpdating(true);
+    try {
+      const response = await api.put(
+        `/api/owner/horses/${selectedHorseId}`,
+        buildHorsePayload(horseForm)
+      );
+      if (response.data?.status === "Success") {
+        alertSuccess(response.data?.message || "Cập nhật ngựa thành công");
+        setShowEditModal(false);
+        window.dispatchEvent(new Event("horseUpdated"));
+      } else {
+        alertFail(response.data?.message || "Cập nhật ngựa thất bại");
+      }
+    } catch (err) {
+      alertFail(err.response?.data?.message || err.message || "Lỗi khi cập nhật ngựa");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -104,10 +249,16 @@ const OwnerDashboard = () => {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-[#D9A520] transition-all border border-white/5">
+                          <button
+                            onClick={() => handleOpenDetail(horse._id)}
+                            className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-[#D9A520] transition-all border border-white/5"
+                          >
                             <Eye size={16}/>
                           </button>
-                          <button className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-emerald-500 transition-all border border-white/5">
+                          <button
+                            onClick={() => handleOpenEdit(horse._id)}
+                            className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-emerald-500 transition-all border border-white/5"
+                          >
                             <Edit3 size={16}/>
                           </button>
                           <button className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5">
@@ -138,6 +289,93 @@ const OwnerDashboard = () => {
             </div>
          </div>
       </div>
+
+      {showDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[#0B101A] border border-white/10 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-black text-white">Chi tiết ngựa</h2>
+                <p className="text-xs text-gray-400">Chỉ hiển thị thông tin cần thiết.</p>
+              </div>
+              <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-white">
+                Đóng
+              </button>
+            </div>
+
+            <div className="p-6">
+              {loadingDetail ? (
+                <div className="py-12 text-center text-sm text-gray-400">Đang tải chi tiết ngựa...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {detailFields.map((field) => (
+                    <div key={field.key} className={field.key === "notes" ? "md:col-span-2" : ""}>
+                      <p className="text-[10px] uppercase tracking-widest text-gray-500 font-black mb-2">{field.label}</p>
+                      <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white min-h-[52px] flex items-center">
+                        {formatHorseDetailValue(field.key, selectedHorseDetail?.[field.key])}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[#0B101A] border border-white/10 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-lg font-black text-white">Cập nhật ngựa</h2>
+                <p className="text-xs text-gray-400">Chỉ chỉnh sửa thông tin cơ bản cần thiết.</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-white">
+                Đóng
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {loadingDetail ? (
+                <div className="py-12 text-center text-sm text-gray-400">Đang tải chi tiết ngựa...</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input value={horseForm.name} onChange={(e) => setHorseForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Tên ngựa" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <input value={horseForm.breed} onChange={(e) => setHorseForm((prev) => ({ ...prev, breed: e.target.value }))} placeholder="Giống loài" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <input value={horseForm.color} onChange={(e) => setHorseForm((prev) => ({ ...prev, color: e.target.value }))} placeholder="Màu sắc" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <select value={horseForm.gender} onChange={(e) => setHorseForm((prev) => ({ ...prev, gender: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50">
+                      <option value="">Chọn giới tính</option>
+                      <option value="Stallion">Stallion</option>
+                      <option value="Mare">Mare</option>
+                    </select>
+                    <input type="date" value={horseForm.dateOfBirth} onChange={(e) => setHorseForm((prev) => ({ ...prev, dateOfBirth: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <input value={horseForm.registrationNumber} onChange={(e) => setHorseForm((prev) => ({ ...prev, registrationNumber: e.target.value }))} placeholder="Mã đăng ký" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <input type="number" value={horseForm.weightKg} onChange={(e) => setHorseForm((prev) => ({ ...prev, weightKg: e.target.value }))} placeholder="Cân nặng (kg)" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <input type="number" value={horseForm.heightCm} onChange={(e) => setHorseForm((prev) => ({ ...prev, heightCm: e.target.value }))} placeholder="Chiều cao (cm)" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <select value={horseForm.status} onChange={(e) => setHorseForm((prev) => ({ ...prev, status: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50 md:col-span-2">
+                      {["Active", "Resting", "Injured", "Retired", "Banned"].map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea value={horseForm.notes} onChange={(e) => setHorseForm((prev) => ({ ...prev, notes: e.target.value }))} placeholder="Ghi chú" rows={4} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-black/10">
+              <button onClick={() => setShowEditModal(false)} className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:bg-white/5 transition-all">
+                Hủy
+              </button>
+              <button onClick={handleUpdateHorse} disabled={loadingDetail || updating} className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black shadow-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                {updating ? "Đang cập nhật..." : "Cập nhật"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

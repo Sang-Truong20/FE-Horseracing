@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Wallet, DollarSign, Send, TrendingUp, History, AlertCircle } from "lucide-react";
+import { Wallet, DollarSign, Send, TrendingUp, History, AlertCircle, CreditCard } from "lucide-react";
 import api from "../../config/axios";
 
 const ManageWallet = () => {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositing, setDepositing] = useState(false);
+  const [depositInfo, setDepositInfo] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
 
@@ -27,6 +30,31 @@ const ManageWallet = () => {
   useEffect(() => {
     fetchWallet();
   }, []);
+
+  const handleDeposit = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      alert("Vui lòng nhập số tiền nạp hợp lệ");
+      return;
+    }
+
+    setDepositing(true);
+    setDepositInfo(null);
+    try {
+      const response = await api.post("/api/wallet/deposit", {
+        amount: parseFloat(depositAmount),
+      });
+      if (response.data?.status === "Success") {
+        setDepositInfo(response.data.data);
+        setDepositAmount("");
+      } else {
+        alert(response.data?.message || "Tạo lệnh nạp thất bại");
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
+    } finally {
+      setDepositing(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
@@ -81,6 +109,69 @@ const ManageWallet = () => {
 
       {/* QUICK ACTIONS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Deposit Section */}
+        <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-[#D9A520]/20 p-3 rounded-2xl">
+              <CreditCard size={24} className="text-[#D9A520]" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Nạp Tiền</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                Số Tiền Nạp
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">₫</span>
+                <input
+                  type="number"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Nhập số tiền..."
+                  className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Hệ thống sẽ tạo nội dung chuyển khoản SePay để ví tự cộng tiền sau khi xác nhận.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDeposit}
+              disabled={depositing || parseFloat(depositAmount) <= 0}
+              className="w-full bg-[#D9A520] text-black font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
+            >
+              {depositing ? "Đang tạo lệnh..." : "Tạo Lệnh Nạp"}
+            </button>
+
+            {depositInfo && (
+              <div className="space-y-3 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 p-4">
+                <div className="flex justify-between gap-4 text-sm">
+                  <span className="text-gray-400">Số tiền</span>
+                  <span className="font-bold text-white">
+                    ₫ {depositInfo.amount?.toLocaleString("vi-VN") || "0"} {depositInfo.currency || "VND"}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Nội dung chuyển khoản</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-black text-[#D9A520] break-all">
+                    {depositInfo.memo}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Bank Tag</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                    {depositInfo.bankTag}
+                  </p>
+                </div>
+                <p className="text-xs leading-relaxed text-gray-400">{depositInfo.note}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Withdraw Section */}
         <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
