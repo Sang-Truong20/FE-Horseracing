@@ -65,7 +65,6 @@ const AdminUsers = () => {
 
   const getRoleBadge = (role) => {
     const badges = {
-      Owner: "bg-purple-500/20 text-purple-300",
       OwnerHorse: "bg-purple-500/20 text-purple-300",
       Jockey: "bg-blue-500/20 text-blue-300",
       EndUser: "bg-emerald-500/20 text-emerald-300",
@@ -192,7 +191,6 @@ const AdminUsers = () => {
               className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
             >
               <option value="all">Tất cả</option>
-              <option value="Owner">Owner</option>
               <option value="OwnerHorse">OwnerHorse</option>
               <option value="Jockey">Jockey</option>
               <option value="EndUser">EndUser</option>
@@ -485,7 +483,6 @@ const AdminUsers = () => {
               placeholder="Chọn vai trò" 
               options={[
                 { label: "EndUser", value: "EndUser" },
-                { label: "Owner", value: "Owner" },
                 { label: "OwnerHorse", value: "OwnerHorse" },
                 { label: "Jockey", value: "Jockey" },
                 { label: "Admin", value: "Admin" },
