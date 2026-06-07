@@ -33,6 +33,61 @@ const AdminRaces = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedRace, setSelectedRace] = useState(null);
+  const [horseLabels, setHorseLabels] = useState({});
+  const [userLabels, setUserLabels] = useState({});
+
+  const getEntityLabel = (entity) => {
+    if (!entity) return "-";
+    if (typeof entity === "string") {
+      if (/^[0-9a-fA-F]{24}$/.test(entity)) {
+        return horseLabels[entity] || userLabels[entity] || "-";
+      }
+      return entity;
+    }
+    return (
+      entity.name ||
+      entity.fullName ||
+      entity.hoTen ||
+      entity.username ||
+      entity.stableName ||
+      entity.email ||
+      "-"
+    );
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get("/api/admin/users");
+      const payload = response.data?.data ?? response.data ?? [];
+      const users = Array.isArray(payload) ? payload : payload.users ?? payload.items ?? [];
+      const map = {};
+      users.forEach((user) => {
+        const id = user._id || user.id;
+        if (!id) return;
+        map[id] = user.fullName || user.username || user.email || user.name || "-";
+      });
+      setUserLabels(map);
+    } catch (err) {
+      console.error("Fetch users error:", err);
+    }
+  };
+
+  const fetchHorses = async () => {
+    try {
+      const response = await api.get("/api/admin/horses");
+      const payload = response.data?.status === "Success" ? response.data.data : [];
+      const horses = Array.isArray(payload) ? payload : [];
+      const map = {};
+      horses.forEach((horse) => {
+        const id = horse._id || horse.id;
+        if (!id) return;
+        map[id] = horse.name || horse.title || horse.horseName || "-";
+      });
+      setHorseLabels(map);
+    } catch (err) {
+      console.error("Fetch horses error:", err);
+    }
+  };
 
   const fetchRaces = async () => {
     try {
@@ -55,6 +110,8 @@ const AdminRaces = () => {
   useEffect(() => {
     document.title = "Quản Lý Cuộc Đua - Thunder";
     fetchRaces();
+    fetchUsers();
+    fetchHorses();
   }, []);
 
   return (
@@ -112,7 +169,6 @@ const AdminRaces = () => {
                         <td className="px-6 py-4">
                           <div>
                             <p className="font-semibold text-white">{race.name || "-"}</p>
-                            <p className="text-xs text-gray-500">ID: {race._id}</p>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(race.raceDate)}</td>
@@ -170,10 +226,6 @@ const AdminRaces = () => {
             <div className="space-y-6 text-gray-900">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <p className="text-sm text-gray-600">_id</p>
-                  <p className="break-all font-semibold">{selectedRace._id}</p>
-                </div>
-                <div>
                   <p className="text-sm text-gray-600">name</p>
                   <p className="font-semibold">{selectedRace.name}</p>
                 </div>
@@ -222,7 +274,6 @@ const AdminRaces = () => {
               <div>
                 <h3 className="mb-3 text-lg font-bold">referee</h3>
                 <div className="rounded-lg border border-gray-200 p-4">
-                  <p><span className="text-gray-600">_id:</span> {selectedRace.referee?._id || "-"}</p>
                   <p><span className="text-gray-600">email:</span> {selectedRace.referee?.email || "-"}</p>
                   <p><span className="text-gray-600">fullName:</span> {selectedRace.referee?.fullName || "-"}</p>
                 </div>
@@ -234,7 +285,6 @@ const AdminRaces = () => {
                   <table className="w-full">
                     <thead className="bg-gray-100">
                       <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold">_id</th>
                         <th className="px-4 py-2 text-left text-sm font-semibold">rank</th>
                         <th className="px-4 py-2 text-left text-sm font-semibold">percent</th>
                       </tr>
@@ -242,7 +292,6 @@ const AdminRaces = () => {
                     <tbody>
                       {selectedRace.prizeDistribution?.map((item) => (
                         <tr key={item._id} className="border-t border-gray-200">
-                          <td className="break-all px-4 py-2 text-sm">{item._id}</td>
                           <td className="px-4 py-2 text-sm">{item.rank}</td>
                           <td className="px-4 py-2 text-sm">{item.percent}%</td>
                         </tr>
@@ -259,11 +308,10 @@ const AdminRaces = () => {
                     selectedRace.registrations.map((registration) => (
                       <div key={registration._id} className="rounded-lg border border-gray-200 p-4">
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                          <p><span className="text-gray-600">_id:</span> {registration._id}</p>
                           <p><span className="text-gray-600">jockeyResponse.status:</span> {registration.jockeyResponse?.status || "-"}</p>
-                          <p><span className="text-gray-600">horse:</span> {registration.horse}</p>
-                          <p><span className="text-gray-600">jockey:</span> {registration.jockey}</p>
-                          <p><span className="text-gray-600">owner:</span> {registration.owner}</p>
+                          <p><span className="text-gray-600">horse:</span> {getEntityLabel(registration.horse)}</p>
+                          <p><span className="text-gray-600">jockey:</span> {getEntityLabel(registration.jockey)}</p>
+                          <p><span className="text-gray-600">owner:</span> {getEntityLabel(registration.owner)}</p>
                           <p><span className="text-gray-600">approvalStatus:</span> {registration.approvalStatus}</p>
                           <p><span className="text-gray-600">entryFeePaid:</span> {formatCurrency(registration.entryFeePaid)}</p>
                           <p><span className="text-gray-600">hireFee:</span> {formatCurrency(registration.hireFee)}</p>
