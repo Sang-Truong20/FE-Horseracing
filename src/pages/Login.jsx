@@ -144,6 +144,18 @@ const Login = () => {
           </button>
         </form>
 
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <p className="text-xs text-gray-400">
+            Chưa có tài khoản?{" "}
+            <a
+              href="/register"
+              className="text-[#D9A520] font-semibold hover:text-[#EBCB75] transition-colors"
+            >
+              Đăng ký ngay
+            </a>
+          </p>
+        </div>
+
         <p className="mt-6 text-center text-xs text-gray-500">© 2026 Thunder Track</p>
         <div className="relative z-10">
           <div className="card-gloss absolute inset-0 pointer-events-none opacity-40" />
