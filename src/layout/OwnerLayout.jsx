@@ -203,9 +203,12 @@ const OwnerLayout = ({ children }) => {
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, gender: e.target.value }))}
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
                   >
-                    <option value="" className="text-gray-400">Chọn giới tính</option>
-                    <option value="Stallion">Stallion</option>
-                    <option value="Mare">Mare</option>
+                      <option value="" className="text-gray-400">Chọn giới tính</option>
+                      <option value="Colt">Colt</option>
+                      <option value="Stallion">Stallion</option>
+                      <option value="Gelding">Gelding</option>
+                      <option value="Filly">Filly</option>
+                      <option value="Mare">Mare</option>
                   </select>
                   <input
                     type="date"
