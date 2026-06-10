@@ -173,9 +173,10 @@ const Register = () => {
               className="w-full rounded-xl border border-white/10 bg-[#0B101A] px-4 py-3 text-sm text-white outline-none"
             >
               <option value="EndUser">Người dùng thường</option>
-              <option value="jockey">Jockey</option>
-              <option value="ownerHorse">Chủ sở hữu ngựa</option>
-              <option value="referee">Tr裁xung tài</option>
+              <option value="Jockey">Jockey</option>
+              <option value="OwnerHorse">Chủ sở hữu ngựa</option>
+              <option value="Referee">Tr裁xung tài</option>
+              <option value="Admin">Quản trị viên</option>
             </select>
           </div>
 
