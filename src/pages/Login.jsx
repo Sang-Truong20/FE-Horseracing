@@ -39,12 +39,15 @@ const Login = () => {
         dispatch(loginSuccess({ user, token }));
 
         // 2. Chuyển hướng dựa trên role
-        if (user.role === "Admin") {
+        const normalizedRole = user.role?.toLowerCase();
+        if (normalizedRole === "admin") {
           navigate("/admin");
-        }else if (user.role === "Jockey") {
+        } else if (normalizedRole === "jockey") {
           navigate("/jockey"); 
-        }else if (user.role === "OwnerHorse") {
+        } else if (normalizedRole === "ownerhorse") {
           navigate("/owner");
+        } else if (normalizedRole === "referee") {
+          navigate("/referee");
         } else {
           alert("Tài khoản của bạn không có quyền truy cập hệ thống");
         }
