@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Calendar, Flag, MapPin, Clock, Users, MoreHorizontal } from "lucide-react";
+import { Calendar, Flag, MapPin, Clock, MoreHorizontal, X } from "lucide-react";
 import api from "../../config/axios";
 
 const statusStyles = {
@@ -26,6 +25,8 @@ const RefereeDashboard = () => {
   const [races, setRaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedRace, setSelectedRace] = useState(null);
+  const [showRaceModal, setShowRaceModal] = useState(false);
 
   useEffect(() => {
     const fetchRaces = async () => {
@@ -45,8 +46,6 @@ const RefereeDashboard = () => {
 
     fetchRaces();
   }, []);
-
-  const navigate = useNavigate();
 
   return (
     <div className="space-y-8">
@@ -83,7 +82,7 @@ const RefereeDashboard = () => {
                     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[race.status] || "bg-white/5 text-gray-200"}`}>{race.status}</span>
                   </div>
                 </div>
-                <button onClick={() => navigate(`/referee/${race._id}`)} className="rounded-3xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#f2cb46]">Chi tiết</button>
+                <button onClick={() => { setSelectedRace(race); setShowRaceModal(true); }} className="rounded-3xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#f2cb46]">Chi tiết</button>
               </div>
 
               <div className="mt-8 overflow-hidden rounded-[28px] border border-white/10 bg-[#0F1322]">
@@ -125,6 +124,93 @@ const RefereeDashboard = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {showRaceModal && selectedRace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-5xl rounded-[32px] bg-[#0B101A] border border-white/10 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div>
+                <h2 className="text-xl font-black text-white">{selectedRace.name}</h2>
+                <p className="text-sm text-gray-400">{formatDate(selectedRace.raceDate)} • {selectedRace.location}</p>
+              </div>
+              <button onClick={() => setShowRaceModal(false)} className="text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-3xl bg-[#111827] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Trạng thái</p>
+                  <p className={`mt-3 inline-flex items-center rounded-full px-3 py-2 text-sm font-semibold ${statusStyles[selectedRace.status] || "bg-white/5 text-gray-200"}`}>{selectedRace.status}</p>
+                </div>
+                <div className="rounded-3xl bg-[#111827] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Khoảng cách</p>
+                  <p className="mt-3 text-2xl font-black text-white">{selectedRace.distanceM || "-"}m</p>
+                </div>
+                <div className="rounded-3xl bg-[#111827] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Giải thưởng</p>
+                  <p className="mt-3 text-2xl font-black text-white">{selectedRace.prizeMoney ? `₫ ${selectedRace.prizeMoney}` : "0"}</p>
+                </div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-3xl bg-[#111827] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Địa điểm</p>
+                  <p className="mt-3 text-lg font-semibold text-white">{selectedRace.location || "-"}</p>
+                </div>
+                <div className="rounded-3xl bg-[#111827] p-5">
+                  <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Phân bổ thưởng</p>
+                  <div className="mt-3 space-y-2">
+                    {selectedRace.prizeDistribution?.length ? (
+                      selectedRace.prizeDistribution.map((item) => (
+                        <div key={item._id} className="flex items-center justify-between rounded-2xl bg-[#0F1322] px-4 py-3 text-sm text-gray-200">
+                          <span>Hạng {item.rank}</span>
+                          <span>{item.percent}%</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">Không có dữ liệu phân bổ.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-[28px] border border-white/10 bg-[#0F1322] p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Danh sách đăng ký</p>
+                    <h3 className="mt-2 text-2xl font-black text-white">{selectedRace.registrations?.length || 0} đăng ký</h3>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {selectedRace.registrations?.length ? (
+                    selectedRace.registrations.map((registration) => (
+                      <div key={registration._id} className="rounded-3xl border border-white/10 bg-[#111827] p-5">
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Ngựa</p>
+                            <p className="font-semibold text-white">{registration.horse?.name || "-"}</p>
+                            <p className="text-sm text-gray-400">{registration.horse?.registrationNumber || "-"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Jockey</p>
+                            <p className="font-semibold text-white">{registration.jockey?.fullName || "-"}</p>
+                            <p className="text-sm text-gray-400">{registration.jockey?.licenseNumber || "-"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Trạng thái</p>
+                            <p className="inline-flex rounded-full bg-[#141B2F] px-3 py-2 text-sm font-semibold text-gray-200">{registration.jockeyResponse?.status || "-"}</p>
+                            <p className="text-sm text-gray-400">Phê duyệt: {registration.approvalStatus || "-"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400">Không có đăng ký nào trong cuộc đua này.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

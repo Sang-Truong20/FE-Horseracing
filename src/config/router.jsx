@@ -16,6 +16,11 @@ import AdminGifts from "../pages/Admin/AdminGifts";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
+import JockeyRequests from "../pages/Jockey/JockeyRequests";
+import JockeySchedule from "../pages/Jockey/JockeySchedule";
+import JockeyIncome from "../pages/Jockey/JockeyIncome";
+import RefereeLayout from "../layout/RefereeLayout";
+import RefereeDashboard from "../pages/Referee/RefereeDashboard";
 
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
@@ -97,7 +102,18 @@ export const router = createBrowserRouter([
         index: true,
         element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
       },
-      // THÊM ROUTE NÀY:
+      {
+        path: "schedule",
+        element: <JockeyLayout><JockeySchedule /></JockeyLayout>,
+      },
+      {
+        path: "income",
+        element: <JockeyLayout><JockeyIncome /></JockeyLayout>,
+      },
+      {
+        path: "requests",
+        element: <JockeyLayout><JockeyRequests /></JockeyLayout>,
+      },
       {
         path: "horses",
         element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
@@ -105,18 +121,13 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/jockey",
-    element: <ProtectedRoute allowRole="Jockey" />,
+    path: "/referee",
+    element: <ProtectedRoute allowRole="Referee" />,
     children: [
       {
         index: true,
-        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
       },
-      // THÊM ROUTE NÀY:
-      {
-        path: "horses",
-        element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
-      }
     ],
   },
   {
