@@ -175,8 +175,7 @@ const Register = () => {
               <option value="EndUser">Người dùng thường</option>
               <option value="Jockey">Jockey</option>
               <option value="OwnerHorse">Chủ sở hữu ngựa</option>
-              <option value="Referee">Tr裁xung tài</option>
-              <option value="Admin">Quản trị viên</option>
+              <option value="Referee">Trọng tài</option>
             </select>
           </div>
 
