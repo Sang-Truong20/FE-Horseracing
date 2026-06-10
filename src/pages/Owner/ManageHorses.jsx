@@ -274,11 +274,22 @@ const ManageHorses = () => {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input value={horseForm.name} onChange={(e) => setHorseForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Tên ngựa" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
-                    <input value={horseForm.breed} onChange={(e) => setHorseForm((prev) => ({ ...prev, breed: e.target.value }))} placeholder="Giống loài" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
+                    <select value={horseForm.breed} onChange={(e) => setHorseForm((prev) => ({ ...prev, breed: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50">
+                      <option value="" className="text-gray-400">Chọn giống loài</option>
+                      <option value="Thoroughbred">Thoroughbred</option>
+                      <option value="Arabian">Arabian</option>
+                      <option value="Quarter Horse">Quarter Horse</option>
+                      <option value="Standardbred">Standardbred</option>
+                      <option value="Appaloosa">Appaloosa</option>
+                      <option value="Mustang">Mustang</option>
+                    </select>
                     <input value={horseForm.color} onChange={(e) => setHorseForm((prev) => ({ ...prev, color: e.target.value }))} placeholder="Màu sắc" className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />
                     <select value={horseForm.gender} onChange={(e) => setHorseForm((prev) => ({ ...prev, gender: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50">
                       <option value="">Chọn giới tính</option>
+                      <option value="Colt">Colt</option>
                       <option value="Stallion">Stallion</option>
+                      <option value="Gelding">Gelding</option>
+                      <option value="Filly">Filly</option>
                       <option value="Mare">Mare</option>
                     </select>
                     <input type="date" value={horseForm.dateOfBirth} onChange={(e) => setHorseForm((prev) => ({ ...prev, dateOfBirth: e.target.value }))} className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50" />

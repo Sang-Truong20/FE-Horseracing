@@ -179,12 +179,19 @@ const OwnerLayout = ({ children }) => {
                     placeholder="Tên ngựa"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
                   />
-                  <input
+                  <select
                     value={newHorse.breed}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, breed: e.target.value }))}
-                    placeholder="Giống loài"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
-                  />
+                  >
+                    <option value="" className="text-gray-400">Chọn giống loài</option>
+                    <option value="Thoroughbred">Thoroughbred</option>
+                    <option value="Arabian">Arabian</option>
+                    <option value="Quarter Horse">Quarter Horse</option>
+                    <option value="Standardbred">Standardbred</option>
+                    <option value="Appaloosa">Appaloosa</option>
+                    <option value="Mustang">Mustang</option>
+                  </select>
                   <input
                     value={newHorse.color}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, color: e.target.value }))}
