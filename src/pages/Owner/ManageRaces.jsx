@@ -9,7 +9,11 @@ const ManageRaces = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedRace, setSelectedRace] = useState(null);
+  const [raceHistory, setRaceHistory] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
   const [ownerHorses, setOwnerHorses] = useState([]);
   const [form, setForm] = useState({ horseId: "", hireFee: "", jockeyBonusPercent: "" });
 
@@ -28,6 +32,24 @@ const ManageRaces = () => {
       setError(err.response?.data?.message || err.message || "Lỗi khi gọi API");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRaceHistory = async (raceId) => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    setRaceHistory(null);
+    try {
+      const res = await api.get(`/api/owner/races/${raceId}`);
+      if (res.data?.status === "Success") {
+        setRaceHistory(res.data.data || null);
+      } else {
+        setHistoryError(res.data?.message || "Không lấy được lịch sử đăng ký");
+      }
+    } catch (err) {
+      setHistoryError(err.response?.data?.message || err.message || "Lỗi khi gọi API lịch sử");
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -101,6 +123,14 @@ const ManageRaces = () => {
                           }}
                           className="px-3 py-2 bg-[#D9A520] text-black rounded-xl font-black text-xs"
                         >Đăng ký</button>
+                        <button
+                          onClick={() => {
+                            setSelectedRace(race);
+                            setShowHistoryModal(true);
+                            fetchRaceHistory(race._id);
+                          }}
+                          className="px-3 py-2 bg-[#1F2937] text-white rounded-xl font-black text-xs border border-white/10 hover:bg-white/5"
+                        >Xem lịch sử</button>
                       </div>
                     </td>
                   </tr>
@@ -160,6 +190,78 @@ const ManageRaces = () => {
               }}
               className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black shadow-lg hover:opacity-90"
             >Đăng ký</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+      {showHistoryModal && selectedRace && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+        <div className="w-full max-w-3xl rounded-[24px] bg-[#0B101A] border border-white/10 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <div>
+              <h3 className="text-lg font-black text-white">Lịch sử đăng ký: {selectedRace.name}</h3>
+            </div>
+            <button onClick={() => setShowHistoryModal(false)} className="text-gray-400">Đóng</button>
+          </div>
+          <div className="p-6 space-y-4">
+            {historyLoading ? (
+              <div className="p-6 text-center text-gray-400">Đang tải lịch sử đăng ký...</div>
+            ) : historyError ? (
+              <div className="p-6 text-center text-red-400">{historyError}</div>
+            ) : raceHistory ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-white">
+                    <div className="text-xs uppercase text-gray-400">Tổng đăng ký</div>
+                    <div className="mt-2 text-2xl font-black">{raceHistory.registrations?.length || 0}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-white">
+                    <div className="text-xs uppercase text-gray-400">Trạng thái</div>
+                    <div className="mt-2 text-2xl font-black">{raceHistory.status || "-"}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-white">
+                    <div className="text-xs uppercase text-gray-400">Ngày thi</div>
+                    <div className="mt-2 text-2xl font-black">{new Date(raceHistory.raceDate).toLocaleString()}</div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-black/20 text-[10px] uppercase text-gray-600 border-b border-white/5">
+                        <th className="px-4 py-3">Ngựa</th>
+                        <th className="px-4 py-3">Jockey</th>
+                        <th className="px-4 py-3">Owner</th>
+                        <th className="px-4 py-3">Hire Fee</th>
+                        <th className="px-4 py-3">Trạng thái</th>
+                        <th className="px-4 py-3">Jockey</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {(raceHistory.participants || raceHistory.registrations)?.length ? (
+                        (raceHistory.participants || raceHistory.registrations).map((registration) => (
+                          <tr key={registration.registrationId || registration._id || Math.random()} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.horse?.name || registration.horse?.registrationNumber || "-"}</td>
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.jockey?.fullName || registration.jockey?.name || "-"}</td>
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.owner?.stableName || registration.owner?.fullName || "-"}</td>
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.hireFee?.toLocaleString() || "-"}</td>
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.approvalStatus || registration.status || "-"}</td>
+                            <td className="px-4 py-3 text-sm text-gray-200">{registration.jockeyResponse?.status || "-"}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="px-4 py-6 text-center text-gray-400">Không có đăng ký nào.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center text-gray-400">Chưa có dữ liệu lịch sử.</div>
+            )}
           </div>
         </div>
       </div>
