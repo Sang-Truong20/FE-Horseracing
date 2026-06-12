@@ -3,6 +3,18 @@ import api from "../../config/axios";
 import { ChevronRight } from "lucide-react";
 import { alertSuccess, alertFail } from "../../assets/hook/useNotification";
 
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || value === "") return "-";
+  return `₫${Number(value).toLocaleString("vi-VN")}`;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("vi-VN");
+};
+
 const ManageRaces = () => {
   const [races, setRaces] = useState([]);
   const [status, setStatus] = useState("Open");
@@ -14,6 +26,9 @@ const ManageRaces = () => {
   const [raceHistory, setRaceHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState(null);
+  const [payoutHistory, setPayoutHistory] = useState([]);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutError, setPayoutError] = useState(null);
   const [ownerHorses, setOwnerHorses] = useState([]);
   const [form, setForm] = useState({ horseId: "", hireFee: "", jockeyBonusPercent: "" });
 
@@ -53,8 +68,27 @@ const ManageRaces = () => {
     }
   };
 
+  const fetchPayoutHistory = async () => {
+    setPayoutLoading(true);
+    setPayoutError(null);
+    try {
+      const res = await api.get("/api/owner/race-history");
+      if (res.data?.status === "Success") {
+        setPayoutHistory(res.data.data || []);
+      } else {
+        setPayoutError(res.data?.message || "Không lấy được lịch sử trả thưởng");
+      }
+    } catch (err) {
+      setPayoutError(err.response?.data?.message || err.message || "Lỗi khi gọi API lịch sử trả thưởng");
+      setPayoutHistory([]);
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRaces(status);
+    fetchPayoutHistory();
     const fetchOwnerHorses = async () => {
       try {
         const res = await api.get("/api/owner/horses");
@@ -108,11 +142,11 @@ const ManageRaces = () => {
                 {races.map((race) => (
                   <tr key={race._id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4 font-bold text-white">{race.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-300">{new Date(race.raceDate).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(race.raceDate)}</td>
                     <td className="px-6 py-4 text-sm text-gray-300">{race.location}</td>
                     <td className="px-6 py-4 text-sm text-gray-300">{race.distanceM}</td>
                     <td className="px-6 py-4 text-sm font-black uppercase text-[#D9A520]">{race.status}</td>
-                    <td className="px-6 py-4 text-right text-sm font-black text-[#D9A520]">{race.prizeMoney?.toLocaleString() || "-"}</td>
+                    <td className="px-6 py-4 text-right text-sm font-black text-[#D9A520]">{formatCurrency(race.prizeMoney)}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -135,6 +169,59 @@ const ManageRaces = () => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#0D1117] rounded-[20px] border border-white/5 overflow-hidden">
+        <div className="p-6 border-b border-white/10">
+          <h2 className="text-lg font-black text-white">Lịch sử trả thưởng</h2>
+          <p className="text-sm text-gray-400">Danh sách các race owner đã tham gia và thông tin payout.</p>
+        </div>
+        {payoutLoading ? (
+          <div className="p-6 text-center text-gray-400">Đang tải lịch sử trả thưởng...</div>
+        ) : payoutError ? (
+          <div className="p-6 text-center text-red-400">{payoutError}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-black/20 text-[10px] uppercase text-gray-600 border-b border-white/5">
+                  <th className="px-6 py-3">Race</th>
+                  <th className="px-6 py-3">Ngày</th>
+                  <th className="px-6 py-3">Địa điểm</th>
+                  <th className="px-6 py-3">Referee</th>
+                  <th className="px-6 py-3">Prize Money</th>
+                  <th className="px-6 py-3">My Horse</th>
+                  <th className="px-6 py-3">Jockey</th>
+                  <th className="px-6 py-3">Hire Fee</th>
+                  <th className="px-6 py-3">Bonus %</th>
+                  <th className="px-6 py-3">Payout</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {payoutHistory.length > 0 ? (
+                  payoutHistory.map((item) => (
+                    <tr key={item.raceId} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 font-bold text-white">{item.raceName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(item.raceDate)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.location}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.referee?.fullName || "-"}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-[#D9A520]">{formatCurrency(item.prizeMoney)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.horse?.name || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockey?.fullName || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(item.myEntry?.hireFee)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockeyBonusPercent ?? 0}%</td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{item.payout ? formatCurrency(item.payout) : "-"}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="10" className="px-6 py-6 text-center text-gray-400">Không có lịch sử trả thưởng.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
