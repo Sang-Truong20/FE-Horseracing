@@ -168,23 +168,28 @@ const AdminUsers = () => {
     }
   };
 
-  const handleDeleteUser = async (user) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`)) {
-      return;
-    }
-
-    try {
-      const response = await api.delete(`${ADMIN_USERS_API}/${user.id}`);
-      if (response.data?.status === "Success") {
-        setUsers((prevUsers) => prevUsers.filter((item) => item.id !== user.id));
-        message.success(response.data?.message || "Xóa người dùng thành công.");
-      } else {
-        message.error(response.data?.message || "Xóa người dùng thất bại.");
-      }
-    } catch (err) {
-      console.error("Delete user error:", err);
-      message.error(err.response?.data?.message || "Lỗi khi xóa người dùng. Vui lòng thử lại.");
-    }
+  const handleDeleteUser = (user) => {
+    Modal.confirm({
+      title: "Xác nhận xóa người dùng",
+      content: `Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const response = await api.delete(`${ADMIN_USERS_API}/${user.id}`);
+          if (response.data?.status === "Success") {
+            setUsers((prevUsers) => prevUsers.filter((item) => item.id !== user.id));
+            message.success(response.data?.message || "Xóa người dùng thành công.");
+          } else {
+            message.error(response.data?.message || "Xóa người dùng thất bại.");
+          }
+        } catch (err) {
+          console.error("Delete user error:", err);
+          message.error(err.response?.data?.message || "Lỗi khi xóa người dùng. Vui lòng thử lại.");
+        }
+      },
+    });
   };
 
   const handleLockUser = async (user) => {
