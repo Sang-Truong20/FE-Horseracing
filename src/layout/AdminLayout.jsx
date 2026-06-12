@@ -82,6 +82,13 @@ const AdminLayout = ({ children }) => {
               <span>Cấp Phép Jockey</span>
             </NavLink>
             <NavLink
+              to="/admin/referees"
+              className={navLinkClass}
+            >
+              <FlagOutlined className="text-lg" />
+              <span>Quản Lý Trọng Tài</span>
+            </NavLink>
+            <NavLink
               to="/admin/races"
               className={navLinkClass}
             >

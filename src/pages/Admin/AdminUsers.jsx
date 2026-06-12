@@ -9,7 +9,7 @@ const ADMIN_USERS_API = "/api/admin/users";
 
 const normalizeUser = (user) => ({
   ...user,
-  id: user._id,
+  id: user._id || user.id,
 });
 
 const AdminUsers = () => {
@@ -169,9 +169,21 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = async (user) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`)) {
-      // TODO: call API delete
-      alert("Xóa người dùng thành công!");
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`)) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`${ADMIN_USERS_API}/${user.id}`);
+      if (response.data?.status === "Success") {
+        setUsers((prevUsers) => prevUsers.filter((item) => item.id !== user.id));
+        message.success(response.data?.message || "Xóa người dùng thành công.");
+      } else {
+        message.error(response.data?.message || "Xóa người dùng thất bại.");
+      }
+    } catch (err) {
+      console.error("Delete user error:", err);
+      message.error(err.response?.data?.message || "Lỗi khi xóa người dùng. Vui lòng thử lại.");
     }
   };
 

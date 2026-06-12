@@ -14,6 +14,7 @@ import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
 import AdminRaces from "../pages/Admin/AdminRaces";
 import AdminGifts from "../pages/Admin/AdminGifts";
+import AdminReferees from "../pages/Admin/AdminReferees";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
@@ -89,6 +90,10 @@ export const router = createBrowserRouter([
       {
         path: "jockeys",
         element: <AdminJockeys />,
+      },
+      {
+        path: "referees",
+        element: <AdminReferees />,
       },
       {
         path: "races",
