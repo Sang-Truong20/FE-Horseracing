@@ -9,7 +9,7 @@ const ADMIN_USERS_API = "/api/admin/users";
 
 const normalizeUser = (user) => ({
   ...user,
-  id: user._id,
+  id: user._id || user.id,
 });
 
 const AdminUsers = () => {
@@ -20,8 +20,10 @@ const AdminUsers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [createForm] = Form.useForm();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -106,6 +108,30 @@ const AdminUsers = () => {
     setIsEditModalVisible(true);
   };
 
+  const handleCreateUser = async () => {
+    try {
+      const values = await createForm.validateFields();
+      const payload = {
+        username: values.username,
+        email: values.email,
+        fullName: values.fullName,
+        role: values.role,
+        password: values.password,
+        phone: values.phone,
+        avatar: values.avatar,
+      };
+      const response = await api.post(ADMIN_USERS_API, payload);
+      const createdUser = normalizeUser(response.data?.data ?? response.data ?? {});
+      setUsers([createdUser, ...users]);
+      setIsCreateModalVisible(false);
+      message.success("Tạo người dùng thành công");
+      createForm.resetFields();
+    } catch (error) {
+      console.error("Create user error:", error);
+      message.error(error.response?.data?.message || "Tạo người dùng thất bại. Vui lòng thử lại.");
+    }
+  };
+
   const handleSaveEdit = async () => {
     try {
       const formValues = await form.validateFields();
@@ -142,11 +168,28 @@ const AdminUsers = () => {
     }
   };
 
-  const handleDeleteUser = async (user) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`)) {
-      // TODO: call API delete
-      alert("Xóa người dùng thành công!");
-    }
+  const handleDeleteUser = (user) => {
+    Modal.confirm({
+      title: "Xác nhận xóa người dùng",
+      content: `Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const response = await api.delete(`${ADMIN_USERS_API}/${user.id}`);
+          if (response.data?.status === "Success") {
+            setUsers((prevUsers) => prevUsers.filter((item) => item.id !== user.id));
+            message.success(response.data?.message || "Xóa người dùng thành công.");
+          } else {
+            message.error(response.data?.message || "Xóa người dùng thất bại.");
+          }
+        } catch (err) {
+          console.error("Delete user error:", err);
+          message.error(err.response?.data?.message || "Lỗi khi xóa người dùng. Vui lòng thử lại.");
+        }
+      },
+    });
   };
 
   const handleLockUser = async (user) => {
@@ -254,9 +297,17 @@ const AdminUsers = () => {
         <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
           <div className="p-6 border-b border-gray-700 flex items-center justify-between">
             <h2 className="text-xl font-bold">Danh Sách Người Dùng</h2>
-            <span className="text-sm text-gray-400">{filteredUsers.length} kết quả</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-400">{filteredUsers.length} kết quả</span>
+              <button
+                onClick={() => {
+                  createForm.resetFields();
+                  setIsCreateModalVisible(true);
+                }}
+                className="px-4 py-2 bg-[#D9A520] text-black rounded-lg font-semibold hover:bg-[#c79c18] transition"
+              >Thêm người dùng</button>
+            </div>
           </div>
-
           {loading ? (
             <div className="p-10 text-center text-gray-400">
               <Spin /> Đang tải dữ liệu...
@@ -527,6 +578,63 @@ const AdminUsers = () => {
               placeholder="Nhập điểm" 
               style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Thêm người dùng mới"
+        open={isCreateModalVisible}
+        onOk={handleCreateUser}
+        onCancel={() => setIsCreateModalVisible(false)}
+        okText="Tạo"
+        cancelText="Hủy"
+        bodyStyle={{ backgroundColor: '#ffffff', color: '#111827', padding: '20px' }}
+        style={{ top: 20 }}
+        className="rounded-lg"
+      >
+        <Form form={createForm} layout="vertical" className="mt-4 text-gray-900">
+          <Form.Item
+            label={<span className="text-gray-700">Họ tên</span>}
+            name="fullName"
+            rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
+          >
+            <Input placeholder="Nhập họ tên" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
+          </Form.Item>
+          <Form.Item
+            label={<span className="text-gray-700">Username</span>}
+            name="username"
+            rules={[{ required: true, message: 'Vui lòng nhập username' }]}
+          >
+            <Input placeholder="Username" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
+          </Form.Item>
+          <Form.Item
+            label={<span className="text-gray-700">Email</span>}
+            name="email"
+            rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ' }]}
+          >
+            <Input type="email" placeholder="Email" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
+          </Form.Item>
+          <Form.Item
+            label={<span className="text-gray-700">Mật khẩu</span>}
+            name="password"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+          >
+            <Input.Password placeholder="Mật khẩu" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Vai trò</span>} name="role" rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}>
+            <Select placeholder="Chọn vai trò" options={[
+                { label: 'Admin', value: 'Admin' },
+                { label: 'OwnerHorse', value: 'OwnerHorse' },
+                { label: 'Jockey', value: 'Jockey' },
+                { label: 'EndUser', value: 'EndUser' },
+              ]} style={{ height: '40px', color: '#111827' }} />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Số điện thoại</span>} name="phone">
+            <Input placeholder="Số điện thoại" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
+          </Form.Item>
+          <Form.Item label={<span className="text-gray-700">Avatar</span>} name="avatar">
+            <Input placeholder="URL avatar" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }} />
           </Form.Item>
         </Form>
       </Modal>
