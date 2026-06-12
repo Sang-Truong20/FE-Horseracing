@@ -15,7 +15,7 @@ const ManageWallet = () => {
   const fetchWallet = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/api/owner/wallet");
+      const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
         setTransactions(response.data.data?.transactions || []);
