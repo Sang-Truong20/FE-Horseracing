@@ -60,7 +60,7 @@ const JockeyRequests = () => {
       setProcessingItem(decisionKey);
 
       const payload = {
-        action,
+        action: action === 'accept' ? 'accept' : 'decline',
         reason: action === 'accept' ? 'Chấp nhận lời mời' : 'Từ chối lời mời',
       };
 
