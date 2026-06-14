@@ -537,6 +537,8 @@ const AdminUsers = () => {
                 { label: "OwnerHorse", value: "OwnerHorse" },
                 { label: "Jockey", value: "Jockey" },
                 { label: "Admin", value: "Admin" },
+                                { label: "Referee", value: "Referee" },
+
               ]}
               style={{ height: '40px', color: '#111827' }}
             />
