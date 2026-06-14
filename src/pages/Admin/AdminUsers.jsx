@@ -238,6 +238,7 @@ const AdminUsers = () => {
               <option value="Jockey">Jockey</option>
               <option value="EndUser">EndUser</option>
               <option value="Admin">Admin</option>
+              <option value="Referee">Referee</option>
             </select>
           </div>
 
@@ -630,6 +631,7 @@ const AdminUsers = () => {
                 { label: 'OwnerHorse', value: 'OwnerHorse' },
                 { label: 'Jockey', value: 'Jockey' },
                 { label: 'EndUser', value: 'EndUser' },
+                { label:'Referee', value:'Referee'}
               ]} style={{ height: '40px', color: '#111827' }} />
           </Form.Item>
           <Form.Item label={<span className="text-gray-700">Số điện thoại</span>} name="phone">
