@@ -134,6 +134,7 @@ const ManageRaces = () => {
                   <th className="px-6 py-3">Ngày giờ</th>
                   <th className="px-6 py-3">Địa điểm</th>
                   <th className="px-6 py-3">Khoảng cách (m)</th>
+                  <th className="px-6 py-3">Phí tham gia</th>
                   <th className="px-6 py-3">Trạng thái</th>
                   <th className="px-6 py-3 text-right">Tiền thưởng</th>
                 </tr>
@@ -145,6 +146,7 @@ const ManageRaces = () => {
                     <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(race.raceDate)}</td>
                     <td className="px-6 py-4 text-sm text-gray-300">{race.location}</td>
                     <td className="px-6 py-4 text-sm text-gray-300">{race.distanceM}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(race.entryFee)}</td>
                     <td className="px-6 py-4 text-sm font-black uppercase text-[#D9A520]">{race.status}</td>
                     <td className="px-6 py-4 text-right text-sm font-black text-[#D9A520]">{formatCurrency(race.prizeMoney)}</td>
                     <td className="px-6 py-4 text-right">
