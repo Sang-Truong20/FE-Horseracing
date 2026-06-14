@@ -6,22 +6,35 @@ const ManageWallet = () => {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
   const [depositInfo, setDepositInfo] = useState(null);
+  const [depositError, setDepositError] = useState(null);
+  const [depositMessage, setDepositMessage] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawBankName, setWithdrawBankName] = useState("");
+  const [withdrawAccountNumber, setWithdrawAccountNumber] = useState("");
+  const [withdrawAccountName, setWithdrawAccountName] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawInfo, setWithdrawInfo] = useState(null);
+  const [withdrawError, setWithdrawError] = useState(null);
+  const [withdrawMessage, setWithdrawMessage] = useState(null);
 
   const fetchWallet = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
         setTransactions(response.data.data?.transactions || []);
+      } else {
+        setError(response.data?.message || "Không thể tải dữ liệu ví");
       }
     } catch (err) {
       console.error("Lỗi khi lấy thông tin ví:", err);
+      setError(err.response?.data?.message || err.message || "Lỗi khi gọi API ví");
     } finally {
       setLoading(false);
     }
@@ -32,8 +45,11 @@ const ManageWallet = () => {
   }, []);
 
   const handleDeposit = async () => {
+    setDepositError(null);
+    setDepositMessage(null);
+
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      alert("Vui lòng nhập số tiền nạp hợp lệ");
+      setDepositError("Vui lòng nhập số tiền nạp hợp lệ");
       return;
     }
 
@@ -57,34 +73,63 @@ const ManageWallet = () => {
         }
         setDepositInfo(info);
         setDepositAmount("");
+        setDepositMessage("Lệnh nạp đã được tạo. Mở QR hoặc hoàn tất chuyển khoản theo hướng dẫn.");
       } else {
-        alert(response.data?.message || "Tạo lệnh nạp thất bại");
+        setDepositError(response.data?.message || "Tạo lệnh nạp thất bại");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
+      setDepositError(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
     } finally {
       setDepositing(false);
     }
   };
 
   const handleWithdraw = async () => {
+    setWithdrawError(null);
+    setWithdrawMessage(null);
+
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
+      setWithdrawError("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+
+    if (!withdrawBankName || withdrawBankName.trim() === "") {
+      setWithdrawError("Vui lòng nhập tên ngân hàng");
+      return;
+    }
+
+    if (!withdrawAccountNumber || withdrawAccountNumber.trim() === "") {
+      setWithdrawError("Vui lòng nhập số tài khoản");
+      return;
+    }
+
+    if (!withdrawAccountName || withdrawAccountName.trim() === "") {
+      setWithdrawError("Vui lòng nhập tên chủ tài khoản");
       return;
     }
 
     setWithdrawing(true);
+    setWithdrawInfo(null);
     try {
-      const response = await api.post("/api/owner/wallet/withdraw", {
+      const response = await api.post("/api/wallet/withdraw", {
         amount: parseFloat(withdrawAmount),
+        bankName: withdrawBankName,
+        accountNumber: withdrawAccountNumber,
+        accountName: withdrawAccountName,
       });
       if (response.data?.status === "Success") {
-        alert("Rút tiền thành công!");
+        setWithdrawInfo(response.data.data || null);
+        setWithdrawMessage("Yêu cầu rút tiền đã được gửi. Vui lòng chờ admin duyệt.");
         setWithdrawAmount("");
+        setWithdrawBankName("");
+        setWithdrawAccountNumber("");
+        setWithdrawAccountName("");
         fetchWallet();
+      } else {
+        setWithdrawError(response.data?.message || "Rút tiền thất bại");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Lỗi khi rút tiền");
+      setWithdrawError(err.response?.data?.message || "Lỗi khi rút tiền");
     } finally {
       setWithdrawing(false);
     }
@@ -98,7 +143,7 @@ const ManageWallet = () => {
           <div>
             <p className="text-sm font-bold uppercase tracking-widest opacity-80">Số Dư Ví</p>
             <h2 className="text-5xl font-black mt-2">
-              {wallet ? `₫ ${wallet.balance?.toLocaleString("vi-VN")}` : "Đang tải..."}
+              {loading ? "Đang tải..." : wallet ? `₫ ${wallet.balance?.toLocaleString("vi-VN")}` : "-"}
             </h2>
           </div>
           <div className="bg-black/20 p-4 rounded-2xl">
@@ -130,6 +175,16 @@ const ManageWallet = () => {
           </div>
 
           <div className="space-y-4">
+            {depositError && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+                {depositError}
+              </div>
+            )}
+            {depositMessage && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                {depositMessage}
+              </div>
+            )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                 Số Tiền Nạp
@@ -259,6 +314,16 @@ const ManageWallet = () => {
           </div>
 
           <div className="space-y-4">
+            {withdrawError && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+                {withdrawError}
+              </div>
+            )}
+            {withdrawMessage && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                {withdrawMessage}
+              </div>
+            )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                 Số Tiền Rút
@@ -278,13 +343,81 @@ const ManageWallet = () => {
               </p>
             </div>
 
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                Tên Ngân Hàng
+              </label>
+              <input
+                type="text"
+                value={withdrawBankName}
+                onChange={(e) => setWithdrawBankName(e.target.value)}
+                placeholder="Vd: Vietcombank, Techcombank..."
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                Số Tài Khoản
+              </label>
+              <input
+                type="text"
+                value={withdrawAccountNumber}
+                onChange={(e) => setWithdrawAccountNumber(e.target.value)}
+                placeholder="Nhập số tài khoản..."
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                Tên Chủ Tài Khoản
+              </label>
+              <input
+                type="text"
+                value={withdrawAccountName}
+                onChange={(e) => setWithdrawAccountName(e.target.value)}
+                placeholder="Nhập tên chủ tài khoản..."
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+
             <button
               onClick={handleWithdraw}
-              disabled={withdrawing || !wallet || parseFloat(withdrawAmount) <= 0}
+              disabled={withdrawing || !wallet || parseFloat(withdrawAmount) <= 0 || !withdrawBankName.trim() || !withdrawAccountNumber.trim() || !withdrawAccountName.trim()}
               className="w-full bg-emerald-500 text-white font-bold py-3 rounded-xl hover:bg-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
             >
               {withdrawing ? "Đang xử lý..." : "Rút Tiền"}
             </button>
+
+            {withdrawInfo && (
+              <div className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div className="flex justify-between gap-4 text-sm">
+                  <span className="text-gray-400">Số tiền</span>
+                  <span className="font-bold text-white">₫ {withdrawInfo.amount?.toLocaleString("vi-VN") || "0"}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Ngân hàng</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                      {withdrawInfo.bankName || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Số tài khoản</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                      {withdrawInfo.accountNumber || "-"}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tên chủ tài khoản</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                    {withdrawInfo.accountName || "-"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

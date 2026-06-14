@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Profile from "../pages/Profile";
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
@@ -15,6 +16,7 @@ import AdminJockeys from "../pages/Admin/AdminJockeys";
 import AdminRaces from "../pages/Admin/AdminRaces";
 import AdminGifts from "../pages/Admin/AdminGifts";
 import AdminReferees from "../pages/Admin/AdminReferees";
+import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
@@ -66,6 +68,10 @@ export const router = createBrowserRouter([
         element: <OwnerLayout><ManageWallet /></OwnerLayout>,
       },
       {
+        path: "profile",
+        element: <OwnerLayout><Profile /></OwnerLayout>,
+      },
+      {
         path: "horses",
         element: <OwnerLayout><ManageHorses /></OwnerLayout>,
       },
@@ -102,6 +108,10 @@ export const router = createBrowserRouter([
       {
         path: "gifts",
         element: <AdminGifts />,
+      },
+      {
+        path: "withdrawals",
+        element: <AdminWithdrawals />,
       },
     ],
   },
