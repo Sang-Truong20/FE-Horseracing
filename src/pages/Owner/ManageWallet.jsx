@@ -6,22 +6,31 @@ const ManageWallet = () => {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
   const [depositInfo, setDepositInfo] = useState(null);
+  const [depositError, setDepositError] = useState(null);
+  const [depositMessage, setDepositMessage] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState(null);
+  const [withdrawMessage, setWithdrawMessage] = useState(null);
 
   const fetchWallet = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
         setTransactions(response.data.data?.transactions || []);
+      } else {
+        setError(response.data?.message || "Không thể tải dữ liệu ví");
       }
     } catch (err) {
       console.error("Lỗi khi lấy thông tin ví:", err);
+      setError(err.response?.data?.message || err.message || "Lỗi khi gọi API ví");
     } finally {
       setLoading(false);
     }
@@ -32,8 +41,11 @@ const ManageWallet = () => {
   }, []);
 
   const handleDeposit = async () => {
+    setDepositError(null);
+    setDepositMessage(null);
+
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      alert("Vui lòng nhập số tiền nạp hợp lệ");
+      setDepositError("Vui lòng nhập số tiền nạp hợp lệ");
       return;
     }
 
@@ -57,19 +69,23 @@ const ManageWallet = () => {
         }
         setDepositInfo(info);
         setDepositAmount("");
+        setDepositMessage("Lệnh nạp đã được tạo. Mở QR hoặc hoàn tất chuyển khoản theo hướng dẫn.");
       } else {
-        alert(response.data?.message || "Tạo lệnh nạp thất bại");
+        setDepositError(response.data?.message || "Tạo lệnh nạp thất bại");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
+      setDepositError(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
     } finally {
       setDepositing(false);
     }
   };
 
   const handleWithdraw = async () => {
+    setWithdrawError(null);
+    setWithdrawMessage(null);
+
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ");
+      setWithdrawError("Vui lòng nhập số tiền hợp lệ");
       return;
     }
 
@@ -79,12 +95,14 @@ const ManageWallet = () => {
         amount: parseFloat(withdrawAmount),
       });
       if (response.data?.status === "Success") {
-        alert("Rút tiền thành công!");
+        setWithdrawMessage("Yêu cầu rút tiền đã được gửi. Vui lòng chờ xử lý.");
         setWithdrawAmount("");
         fetchWallet();
+      } else {
+        setWithdrawError(response.data?.message || "Rút tiền thất bại");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Lỗi khi rút tiền");
+      setWithdrawError(err.response?.data?.message || "Lỗi khi rút tiền");
     } finally {
       setWithdrawing(false);
     }
@@ -98,7 +116,7 @@ const ManageWallet = () => {
           <div>
             <p className="text-sm font-bold uppercase tracking-widest opacity-80">Số Dư Ví</p>
             <h2 className="text-5xl font-black mt-2">
-              {wallet ? `₫ ${wallet.balance?.toLocaleString("vi-VN")}` : "Đang tải..."}
+              {loading ? "Đang tải..." : wallet ? `₫ ${wallet.balance?.toLocaleString("vi-VN")}` : "-"}
             </h2>
           </div>
           <div className="bg-black/20 p-4 rounded-2xl">
@@ -130,6 +148,16 @@ const ManageWallet = () => {
           </div>
 
           <div className="space-y-4">
+            {depositError && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+                {depositError}
+              </div>
+            )}
+            {depositMessage && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                {depositMessage}
+              </div>
+            )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                 Số Tiền Nạp
@@ -259,6 +287,16 @@ const ManageWallet = () => {
           </div>
 
           <div className="space-y-4">
+            {withdrawError && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+                {withdrawError}
+              </div>
+            )}
+            {withdrawMessage && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                {withdrawMessage}
+              </div>
+            )}
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                 Số Tiền Rút

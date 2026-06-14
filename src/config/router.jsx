@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Profile from "../pages/Profile";
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
@@ -64,6 +65,10 @@ export const router = createBrowserRouter([
       {
         path: "wallet",
         element: <OwnerLayout><ManageWallet /></OwnerLayout>,
+      },
+      {
+        path: "profile",
+        element: <OwnerLayout><Profile /></OwnerLayout>,
       },
       {
         path: "horses",
