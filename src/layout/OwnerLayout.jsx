@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
-import { logout } from "../redux/features/userSlice";
+import { logout, loginSuccess } from "../redux/features/userSlice";
 import api from "../config/axios";
 import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import { 
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 const OwnerLayout = ({ children }) => {
-  const { user } = useSelector((state) => state.user);
+  const { user, token } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showAddHorseModal, setShowAddHorseModal] = useState(false);
@@ -54,6 +54,27 @@ const OwnerLayout = ({ children }) => {
     { to: "/owner/races", icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
     { to: "/owner/wallet", icon: <Wallet size={20}/>, label: "Quản Lý Ví" },
   ];
+
+  const handleRefreshProfile = async () => {
+    if (refreshingProfile) return;
+    setRefreshingProfile(true);
+
+    try {
+      const response = await api.get("/api/auth/me");
+      if (response.data?.status === "Success" && response.data?.data) {
+        const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
+        dispatch(loginSuccess({ user: response.data.data, token: currentToken }));
+        alertSuccess("Thông tin tài khoản đã được cập nhật.");
+      } else {
+        alertFail("Không thể lấy thông tin tài khoản.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi gọi auth/me:", error);
+      alertFail("Lỗi khi tải lại thông tin tài khoản.");
+    } finally {
+      setRefreshingProfile(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-[#05070A] text-gray-300 font-sans">
@@ -104,22 +125,27 @@ const OwnerLayout = ({ children }) => {
 
         {/* User Button (Góc dưới Sidebar) */}
         <div className="mt-auto border-t border-white/5 pt-6 space-y-4">
-           <div className="flex items-center justify-between group bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/20 transition-all">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
-                   {user?.fullName?.charAt(0) || "U"}
+           <div className="flex flex-col gap-3 group bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/20 transition-all">
+              <button
+                type="button"
+                onClick={() => navigate("/owner/profile")}
+                className="flex items-center w-full gap-3 text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">
+                     {user?.fullName?.charAt(0) || "U"}
+                  </div>
+                  <div className="overflow-hidden">
+                    <h4 className="text-xs font-bold text-white truncate w-32 uppercase">{user?.fullName || user?.username || "Người dùng"}</h4>
+                    <p className="text-[10px] text-gray-500 font-medium truncate w-32">{user?.companyName || user?.stableName || user?.role || "Owner"}</p>
+                  </div>
                 </div>
-                <div className="overflow-hidden">
-                  <h4 className="text-xs font-bold text-white truncate w-24 uppercase">{user?.username}</h4>
-                  <p className="text-[10px] text-gray-500 font-medium">Owner • VIP</p>
-                </div>
-              </div>
+              </button>
               <button
                 onClick={() => {
                   dispatch(logout());
                   navigate("/login");
                 }}
-                className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-colors border border-white/10 px-3 py-2 rounded-xl"
+                className="flex items-center gap-2 justify-center text-gray-400 hover:text-red-500 transition-colors border border-white/10 px-3 py-2 rounded-xl"
               >
                 <LogOut size={16} />
                 <span className="text-[10px] uppercase tracking-widest font-black">Logout</span>
@@ -179,24 +205,37 @@ const OwnerLayout = ({ children }) => {
                     placeholder="Tên ngựa"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
                   />
-                  <input
+                  <select
                     value={newHorse.breed}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, breed: e.target.value }))}
-                    placeholder="Giống loài"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
-                  />
+                  >
+                    <option value="" className="text-gray-400">Chọn giống loài</option>
+                    <option value="Thoroughbred">Thoroughbred</option>
+                    <option value="Arabian">Arabian</option>
+                    <option value="Quarter Horse">Quarter Horse</option>
+                    <option value="Standardbred">Standardbred</option>
+                    <option value="Appaloosa">Appaloosa</option>
+                    <option value="Mustang">Mustang</option>
+                  </select>
                   <input
                     value={newHorse.color}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, color: e.target.value }))}
                     placeholder="Màu sắc"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
                   />
-                  <input
+                  <select
                     value={newHorse.gender}
                     onChange={(e) => setNewHorse((prev) => ({ ...prev, gender: e.target.value }))}
-                    placeholder="Giới tính"
                     className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D9A520]/50"
-                  />
+                  >
+                      <option value="" className="text-gray-400">Chọn giới tính</option>
+                      <option value="Colt">Colt</option>
+                      <option value="Stallion">Stallion</option>
+                      <option value="Gelding">Gelding</option>
+                      <option value="Filly">Filly</option>
+                      <option value="Mare">Mare</option>
+                  </select>
                   <input
                     type="date"
                     value={newHorse.dateOfBirth}
