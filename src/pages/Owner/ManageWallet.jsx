@@ -44,7 +44,18 @@ const ManageWallet = () => {
         amount: parseFloat(depositAmount),
       });
       if (response.data?.status === "Success") {
-        setDepositInfo(response.data.data);
+        const info = { ...response.data.data };
+        info.bank = {
+          ...info.bank,
+          accountNumber: info.bank?.accountNumber || "4444666677",
+          accountName: info.bank?.accountName || "CONG TY TNHH YZ",
+        };
+        const bankCode = info.bank?.code || "BIDV";
+        const accountNumber = info.bank.accountNumber;
+        if (!info.qrUrl || info.qrUrl.includes("acc=&")) {
+          info.qrUrl = `https://qr.sepay.vn/img?bank=${encodeURIComponent(bankCode)}&acc=${encodeURIComponent(accountNumber)}&template=compact&amount=${encodeURIComponent(info.amount)}&des=${encodeURIComponent(info.memo || "")}`;
+        }
+        setDepositInfo(info);
         setDepositAmount("");
       } else {
         alert(response.data?.message || "Tạo lệnh nạp thất bại");
@@ -138,6 +149,35 @@ const ManageWallet = () => {
               </p>
             </div>
 
+            <div className="rounded-3xl border border-white/10 bg-[#05070C] p-5 text-sm text-gray-300">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs uppercase tracking-[0.2em] text-gray-500">SePay sandbox</span>
+                <span className="rounded-full bg-[#D9A520]/10 px-3 py-1 text-[11px] font-semibold text-[#D9A520]">Doanh nghiệp</span>
+              </div>
+              <h4 className="text-lg font-black text-white">CONG TY TNHH YZ</h4>
+              <div className="grid gap-2 mt-4">
+                <div className="flex justify-between">
+                  <span>Số tài khoản</span>
+                  <span className="font-semibold text-white">4444666677</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>CMND/CCCD</span>
+                  <span className="font-semibold text-white">4444666677</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Số điện thoại</span>
+                  <span className="font-semibold text-white">0000000016</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>OTP</span>
+                  <span className="font-semibold text-white">444466</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Dùng thông tin này để test chuyển khoản SePay sandbox.
+              </p>
+            </div>
+
             <button
               onClick={handleDeposit}
               disabled={depositing || parseFloat(depositAmount) <= 0}
@@ -147,12 +187,40 @@ const ManageWallet = () => {
             </button>
 
             {depositInfo && (
-              <div className="space-y-3 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 p-4">
+              <div className="space-y-4 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 p-4">
                 <div className="flex justify-between gap-4 text-sm">
                   <span className="text-gray-400">Số tiền</span>
                   <span className="font-bold text-white">
                     ₫ {depositInfo.amount?.toLocaleString("vi-VN") || "0"} {depositInfo.currency || "VND"}
                   </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Ngân hàng</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                      {depositInfo.bank?.code || "---"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Bank Tag</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                      {depositInfo.bankTag || "---"}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Số TK</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
+                      {depositInfo.bank?.accountNumber || "4444666677"}
+                    </p>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tên chủ tài khoản</p>
+                    <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
+                      {depositInfo.bank?.accountName || "CONG TY TNHH YZ"}
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Nội dung chuyển khoản</p>
@@ -160,12 +228,21 @@ const ManageWallet = () => {
                     {depositInfo.memo}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Bank Tag</p>
-                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
-                    {depositInfo.bankTag}
-                  </p>
-                </div>
+                {depositInfo.qrUrl && (
+                  <div className="flex flex-col gap-2">
+                    <a
+                      href={depositInfo.qrUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-2xl bg-black/80 px-4 py-3 text-sm font-semibold text-[#D9A520] hover:bg-white/5 transition"
+                    >
+                      Mở mã QR nạp tiền
+                    </a>
+                    <p className="text-xs text-gray-400">
+                      Quét QR bằng app ngân hàng hoặc mở QR trên SePay sandbox.
+                    </p>
+                  </div>
+                )}
                 <p className="text-xs leading-relaxed text-gray-400">{depositInfo.note}</p>
               </div>
             )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Wallet, History, AlertCircle } from "lucide-react";
+import { Wallet, History, AlertCircle, CreditCard } from "lucide-react";
 import api from "../../config/axios";
 
 const JockeyWallet = () => {
@@ -7,6 +7,11 @@ const JockeyWallet = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositing, setDepositing] = useState(false);
+  const [depositInfo, setDepositInfo] = useState(null);
+  const [depositError, setDepositError] = useState(null);
+  const [depositMessage, setDepositMessage] = useState(null);
 
   const fetchWallet = async () => {
     setLoading(true);
@@ -30,6 +35,46 @@ const JockeyWallet = () => {
   useEffect(() => {
     fetchWallet();
   }, []);
+
+  const handleDeposit = async () => {
+    setDepositError(null);
+    setDepositMessage(null);
+
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
+      setDepositError("Vui lòng nhập số tiền nạp hợp lệ");
+      return;
+    }
+
+    setDepositing(true);
+    setDepositInfo(null);
+    try {
+      const response = await api.post("/api/wallet/deposit", {
+        amount: parseFloat(depositAmount),
+      });
+      if (response.data?.status === "Success") {
+        const info = { ...response.data.data };
+        info.bank = {
+          ...info.bank,
+          accountNumber: info.bank?.accountNumber || "4444666677",
+          accountName: info.bank?.accountName || "CONG TY TNHH YZ",
+        };
+        const bankCode = info.bank?.code || "BIDV";
+        const accountNumber = info.bank.accountNumber;
+        if (!info.qrUrl || info.qrUrl.includes("acc=&")) {
+          info.qrUrl = `https://qr.sepay.vn/img?bank=${encodeURIComponent(bankCode)}&acc=${encodeURIComponent(accountNumber)}&template=compact&amount=${encodeURIComponent(info.amount)}&des=${encodeURIComponent(info.memo || "")}`;
+        }
+        setDepositInfo(info);
+        setDepositAmount("");
+        setDepositMessage("Lệnh nạp đã được tạo. Mở QR hoặc hoàn tất chuyển khoản theo hướng dẫn.");
+      } else {
+        setDepositError(response.data?.message || "Tạo lệnh nạp thất bại");
+      }
+    } catch (err) {
+      setDepositError(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
+    } finally {
+      setDepositing(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -55,6 +100,148 @@ const JockeyWallet = () => {
             <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Tổng Chi</p>
             <p className="text-2xl font-black">₫ {wallet?.totalExpense?.toLocaleString("vi-VN") || "0"}</p>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-[#D9A520]/20 p-3 rounded-2xl">
+            <CreditCard size={24} className="text-[#D9A520]" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Nạp Tiền</h3>
+            <p className="text-sm text-gray-400">Tạo lệnh nạp và mở mã QR SePay để hoàn tất.</p>
+          </div>
+        </div>
+
+        {depositError && (
+          <div className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+            {depositError}
+          </div>
+        )}
+        {depositMessage && (
+          <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+            {depositMessage}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+              Số Tiền Nạp
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600">₫</span>
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="Nhập số tiền..."
+                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Nhập số tiền cần nạp để hệ thống sinh mã QR SePay.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#05070C] p-5 text-sm text-gray-300">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs uppercase tracking-[0.2em] text-gray-500">SePay sandbox</span>
+              <span className="rounded-full bg-[#D9A520]/10 px-3 py-1 text-[11px] font-semibold text-[#D9A520]">Doanh nghiệp</span>
+            </div>
+            <h4 className="text-lg font-black text-white">CONG TY TNHH YZ</h4>
+            <div className="grid gap-2 mt-4">
+              <div className="flex justify-between">
+                <span>Số tài khoản</span>
+                <span className="font-semibold text-white">4444666677</span>
+              </div>
+              <div className="flex justify-between">
+                <span>CMND/CCCD</span>
+                <span className="font-semibold text-white">4444666677</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Số điện thoại</span>
+                <span className="font-semibold text-white">0000000016</span>
+              </div>
+              <div className="flex justify-between">
+                <span>OTP</span>
+                <span className="font-semibold text-white">444466</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">
+              Dùng thông tin này để test chuyển khoản SePay sandbox.
+            </p>
+          </div>
+
+          <button
+            onClick={handleDeposit}
+            disabled={depositing || parseFloat(depositAmount) <= 0}
+            className="w-full bg-[#D9A520] text-black font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
+          >
+            {depositing ? "Đang tạo lệnh..." : "Tạo Lệnh Nạp"}
+          </button>
+
+          {depositInfo && (
+            <div className="space-y-4 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 p-4">
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-gray-400">Số tiền</span>
+                <span className="font-bold text-white">
+                  ₫ {depositInfo.amount?.toLocaleString("vi-VN") || "0"} {depositInfo.currency || "VND"}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Ngân hàng</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                    {depositInfo.bank?.code || "---"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Bank Tag</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
+                    {depositInfo.bankTag || "---"}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Số TK</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
+                    {depositInfo.bank?.accountNumber || "4444666677"}
+                  </p>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tên chủ tài khoản</p>
+                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
+                    {depositInfo.bank?.accountName || "CONG TY TNHH YZ"}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Nội dung chuyển khoản</p>
+                <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-black text-[#D9A520] break-all">
+                  {depositInfo.memo}
+                </p>
+              </div>
+              {depositInfo.qrUrl && (
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={depositInfo.qrUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-2xl bg-black/80 px-4 py-3 text-sm font-semibold text-[#D9A520] hover:bg-white/5 transition"
+                  >
+                    Mở mã QR nạp tiền
+                  </a>
+                  <p className="text-xs text-gray-400">
+                    Quét QR bằng app ngân hàng hoặc mở QR trên SePay sandbox.
+                  </p>
+                </div>
+              )}
+              <p className="text-xs leading-relaxed text-gray-400">{depositInfo.note}</p>
+            </div>
+          )}
         </div>
       </div>
 
