@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Modal, Spin } from "antd";
+import { Alert, Modal, Spin, Form, Input, Select, DatePicker, Checkbox, message } from "antd";
 import AdminLayout from "../../layout/AdminLayout";
 import api from "../../config/axios";
 
@@ -33,8 +33,12 @@ const AdminRaces = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedRace, setSelectedRace] = useState(null);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [referees, setReferees] = useState([]);
   const [horseLabels, setHorseLabels] = useState({});
   const [userLabels, setUserLabels] = useState({});
+  const [createForm] = Form.useForm();
 
   const getEntityLabel = (entity) => {
     if (!entity) return "-";
@@ -89,6 +93,70 @@ const AdminRaces = () => {
     }
   };
 
+  const fetchReferees = async () => {
+    try {
+      const response = await api.get("/api/admin/referees");
+      const payload = response.data?.status === "Success" ? response.data.data : [];
+      setReferees(Array.isArray(payload) ? payload : []);
+    } catch (err) {
+      console.error("Fetch referees error:", err);
+      setReferees([]);
+    }
+  };
+
+  const openCreateModal = () => {
+    setCreateModalVisible(true);
+    createForm.resetFields();
+  };
+
+  const closeCreateModal = () => {
+    setCreateModalVisible(false);
+  };
+
+  const handleCreateRace = async () => {
+    try {
+      const values = await createForm.validateFields();
+      let prizeDistribution;
+      try {
+        prizeDistribution = JSON.parse(values.prizeDistribution);
+        if (!Array.isArray(prizeDistribution)) throw new Error();
+      } catch (parseError) {
+        message.error("Prize distribution phải là JSON array hợp lệ.");
+        return;
+      }
+
+      const payload = {
+        name: values.name,
+        raceDate: values.raceDate.toISOString(),
+        location: values.location,
+        distanceM: Number(values.distanceM),
+        refereeId: values.refereeId,
+        status: values.status,
+        prizeMoney: Number(values.prizeMoney),
+        entryFee: Number(values.entryFee),
+        addEntryFeeToPrize: Boolean(values.addEntryFeeToPrize),
+        prizeDistribution,
+      };
+
+      setCreating(true);
+      const response = await api.post(ADMIN_RACES_API, payload);
+      if (response.data?.status === "Success") {
+        const createdRace = response.data?.data ?? response.data;
+        setRaces((prev) => [createdRace, ...prev]);
+        setCreateModalVisible(false);
+        message.success(response.data?.message || "Tạo cuộc đua thành công.");
+        createForm.resetFields();
+      } else {
+        message.error(response.data?.message || "Tạo cuộc đua thất bại.");
+      }
+    } catch (err) {
+      console.error("Create race error:", err);
+      message.error(err.response?.data?.message || "Lỗi khi tạo cuộc đua. Vui lòng thử lại.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const fetchRaces = async () => {
     try {
       setLoading(true);
@@ -112,6 +180,7 @@ const AdminRaces = () => {
     fetchRaces();
     fetchUsers();
     fetchHorses();
+    fetchReferees();
   }, []);
 
   return (
@@ -132,11 +201,17 @@ const AdminRaces = () => {
         )}
 
         <div className="overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
-          <div className="flex items-center justify-between border-b border-gray-700 p-6">
+          <div className="flex flex-col gap-4 border-b border-gray-700 p-6 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-bold">Danh Sách Cuộc Đua</h2>
               <p className="text-sm text-gray-400">{races.length} cuộc đua</p>
             </div>
+            <button
+              onClick={openCreateModal}
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700"
+            >
+              Tạo cuộc đua mới
+            </button>
           </div>
 
           {loading ? (
@@ -333,6 +408,117 @@ const AdminRaces = () => {
               </div>
             </div>
           )}
+        </Modal>
+
+        <Modal
+          title="Tạo cuộc đua mới"
+          open={createModalVisible}
+          onCancel={closeCreateModal}
+          onOk={handleCreateRace}
+          confirmLoading={creating}
+          width={720}
+          bodyStyle={{ backgroundColor: "#ffffff", color: "#111827", padding: "20px" }}
+          okText="Tạo mới"
+          cancelText="Hủy"
+        >
+          <Form form={createForm} layout="vertical">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Form.Item
+                name="name"
+                label="Tên cuộc đua"
+                rules={[{ required: true, message: "Vui lòng nhập tên cuộc đua" }]}
+              >
+                <Input placeholder="Saigon Spring Derby 2026" />
+              </Form.Item>
+
+              <Form.Item
+                name="raceDate"
+                label="Ngày đua"
+                rules={[{ required: true, message: "Vui lòng chọn ngày đua" }]}
+              >
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+
+              <Form.Item
+                name="location"
+                label="Địa điểm"
+                rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
+              >
+                <Input placeholder="Hanoi Race Track" />
+              </Form.Item>
+
+              <Form.Item
+                name="distanceM"
+                label="Cự ly (m)"
+                rules={[{ required: true, message: "Vui lòng nhập cự ly" }]}
+              >
+                <Input type="number" placeholder="1600" />
+              </Form.Item>
+
+              <Form.Item
+                name="refereeId"
+                label="Referee"
+                rules={[{ required: true, message: "Vui lòng chọn referee" }]}
+              >
+                <Select
+                  placeholder="Chọn referee"
+                  options={referees.map((ref) => ({
+                    label: ref.fullName || ref.username || ref.email || "-",
+                    value: ref._id,
+                  }))}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="status"
+                label="Trạng thái"
+                initialValue="Open"
+                rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+              >
+                <Select
+                  options={[
+                    { label: "Open", value: "Open" },
+                    { label: "Draft", value: "Draft" },
+                    { label: "Pending", value: "Pending" },
+                    { label: "Locked", value: "Locked" },
+                    { label: "Finished", value: "Finished" },
+                  ]}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="prizeMoney"
+                label="Prize Money"
+                rules={[{ required: true, message: "Vui lòng nhập prize money" }]}
+              >
+                <Input type="number" placeholder="10000000" />
+              </Form.Item>
+
+              <Form.Item
+                name="entryFee"
+                label="Entry Fee"
+                rules={[{ required: true, message: "Vui lòng nhập entry fee" }]}
+              >
+                <Input type="number" placeholder="500000" />
+              </Form.Item>
+
+              <Form.Item
+                name="addEntryFeeToPrize"
+                valuePropName="checked"
+                label="Cộng phí vào thưởng"
+              >
+                <Checkbox>Thêm entry fee vào prize</Checkbox>
+              </Form.Item>
+
+              <Form.Item
+                name="prizeDistribution"
+                label="Prize Distribution"
+                rules={[{ required: true, message: "Vui lòng nhập prize distribution" }]}
+              >
+                <Input.TextArea rows={4} placeholder='[{"rank":1,"percent":60}]' />
+              </Form.Item>
+            </div>
+          </Form>
         </Modal>
       </div>
     </AdminLayout>

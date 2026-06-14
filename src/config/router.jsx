@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Profile from "../pages/Profile";
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
@@ -14,6 +15,10 @@ import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
 import AdminRaces from "../pages/Admin/AdminRaces";
 import AdminGifts from "../pages/Admin/AdminGifts";
+
+=======
+import AdminReferees from "../pages/Admin/AdminReferees";
+
 import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
@@ -21,6 +26,7 @@ import JockeyHorses from "../pages/Jockey/JockeyHorses";
 import JockeyRequests from "../pages/Jockey/JockeyRequests";
 import JockeySchedule from "../pages/Jockey/JockeySchedule";
 import JockeyIncome from "../pages/Jockey/JockeyIncome";
+import JockeyWallet from "../pages/Jockey/JockeyWallet";
 import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
 
@@ -65,6 +71,10 @@ export const router = createBrowserRouter([
         element: <OwnerLayout><ManageWallet /></OwnerLayout>,
       },
       {
+        path: "profile",
+        element: <OwnerLayout><Profile /></OwnerLayout>,
+      },
+      {
         path: "horses",
         element: <OwnerLayout><ManageHorses /></OwnerLayout>,
       },
@@ -89,6 +99,10 @@ export const router = createBrowserRouter([
       {
         path: "jockeys",
         element: <AdminJockeys />,
+      },
+      {
+        path: "referees",
+        element: <AdminReferees />,
       },
       {
         path: "races",
@@ -119,6 +133,10 @@ export const router = createBrowserRouter([
       {
         path: "income",
         element: <JockeyLayout><JockeyIncome /></JockeyLayout>,
+      },
+      {
+        path: "wallet",
+        element: <JockeyLayout><JockeyWallet /></JockeyLayout>,
       },
       {
         path: "requests",
