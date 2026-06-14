@@ -12,7 +12,11 @@ import {
   BarChartOutlined,
   FileTextOutlined,
   LogoutOutlined,
+
+  BankOutlined,
+
   WalletOutlined,
+
 } from "@ant-design/icons";
 
 const AdminLayout = ({ children }) => {
@@ -107,7 +111,11 @@ const AdminLayout = ({ children }) => {
               to="/admin/withdrawals"
               className={navLinkClass}
             >
+
+              <BankOutlined className="text-lg" />
+
               <WalletOutlined className="text-lg" />
+
               <span>Quản Lý Rút Tiền</span>
             </NavLink>
           </div>
