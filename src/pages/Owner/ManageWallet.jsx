@@ -15,7 +15,7 @@ const ManageWallet = () => {
   const fetchWallet = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/api/owner/wallet");
+      const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
         setTransactions(response.data.data?.transactions || []);
@@ -64,7 +64,7 @@ const ManageWallet = () => {
 
     setWithdrawing(true);
     try {
-      const response = await api.post("/api/owner/wallet/withdraw", {
+      const response = await api.post("/api/wallet/withdraw", {
         amount: parseFloat(withdrawAmount),
       });
       if (response.data?.status === "Success") {
