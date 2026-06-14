@@ -16,6 +16,7 @@ import AdminJockeys from "../pages/Admin/AdminJockeys";
 import AdminRaces from "../pages/Admin/AdminRaces";
 import AdminGifts from "../pages/Admin/AdminGifts";
 import AdminReferees from "../pages/Admin/AdminReferees";
+import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
 import JockeyLayout from "../layout/JockeyLayout";
 import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
@@ -107,6 +108,10 @@ export const router = createBrowserRouter([
       {
         path: "gifts",
         element: <AdminGifts />,
+      },
+      {
+        path: "withdrawals",
+        element: <AdminWithdrawals />,
       },
     ],
   },
