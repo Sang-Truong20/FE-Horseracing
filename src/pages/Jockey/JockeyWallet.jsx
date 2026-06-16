@@ -9,9 +9,9 @@ const JockeyWallet = () => {
   const [error, setError] = useState(null);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
-  const [depositInfo, setDepositInfo] = useState(null);
   const [depositError, setDepositError] = useState(null);
   const [depositMessage, setDepositMessage] = useState(null);
+  const [depositBankCode, setDepositBankCode] = useState("NCB");
 
   const fetchWallet = async () => {
     setLoading(true);
@@ -46,29 +46,24 @@ const JockeyWallet = () => {
     }
 
     setDepositing(true);
-    setDepositInfo(null);
     try {
       const response = await api.post("/api/wallet/deposit", {
         amount: parseFloat(depositAmount),
+        bankCode: depositBankCode,
       });
-      if (response.data?.status === "Success") {
-        const info = { ...response.data.data };
-        info.bank = {
-          ...info.bank,
-          accountNumber: info.bank?.accountNumber || "4444666677",
-          accountName: info.bank?.accountName || "CONG TY TNHH YZ",
-        };
-        const bankCode = info.bank?.code || "BIDV";
-        const accountNumber = info.bank.accountNumber;
-        if (!info.qrUrl || info.qrUrl.includes("acc=&")) {
-          info.qrUrl = `https://qr.sepay.vn/img?bank=${encodeURIComponent(bankCode)}&acc=${encodeURIComponent(accountNumber)}&template=compact&amount=${encodeURIComponent(info.amount)}&des=${encodeURIComponent(info.memo || "")}`;
-        }
-        setDepositInfo(info);
-        setDepositAmount("");
-        setDepositMessage("Lệnh nạp đã được tạo. Mở QR hoặc hoàn tất chuyển khoản theo hướng dẫn.");
-      } else {
-        setDepositError(response.data?.message || "Tạo lệnh nạp thất bại");
+      const data = response.data?.data ?? response.data ?? {};
+      const paymentUrl = data.paymentUrl;
+      const txId = data.txId;
+
+      if (!paymentUrl) {
+        setDepositError(response.data?.message || "Không tạo được liên kết thanh toán VNPay");
+        return;
       }
+
+      // Lưu txId để trang /payment-result có thể poll trạng thái sau khi VNPay redirect về.
+      if (txId) localStorage.setItem("pendingDepositTxId", txId);
+      setDepositMessage("Đang chuyển hướng tới cổng thanh toán VNPay...");
+      window.location.href = paymentUrl;
     } catch (err) {
       setDepositError(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
     } finally {
@@ -110,7 +105,7 @@ const JockeyWallet = () => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-white">Nạp Tiền</h3>
-            <p className="text-sm text-gray-400">Tạo lệnh nạp và mở mã QR SePay để hoàn tất.</p>
+            <p className="text-sm text-gray-400">Nạp tiền qua cổng thanh toán VNPay.</p>
           </div>
         </div>
 
@@ -141,36 +136,25 @@ const JockeyWallet = () => {
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Nhập số tiền cần nạp để hệ thống sinh mã QR SePay.
+              Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-[#05070C] p-5 text-sm text-gray-300">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs uppercase tracking-[0.2em] text-gray-500">SePay sandbox</span>
-              <span className="rounded-full bg-[#D9A520]/10 px-3 py-1 text-[11px] font-semibold text-[#D9A520]">Doanh nghiệp</span>
-            </div>
-            <h4 className="text-lg font-black text-white">CONG TY TNHH YZ</h4>
-            <div className="grid gap-2 mt-4">
-              <div className="flex justify-between">
-                <span>Số tài khoản</span>
-                <span className="font-semibold text-white">4444666677</span>
-              </div>
-              <div className="flex justify-between">
-                <span>CMND/CCCD</span>
-                <span className="font-semibold text-white">4444666677</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Số điện thoại</span>
-                <span className="font-semibold text-white">0000000016</span>
-              </div>
-              <div className="flex justify-between">
-                <span>OTP</span>
-                <span className="font-semibold text-white">444466</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Dùng thông tin này để test chuyển khoản SePay sandbox.
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+              Ngân Hàng
+            </label>
+            <select
+              value={depositBankCode}
+              onChange={(e) => setDepositBankCode(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
+            >
+              <option value="NCB">NCB</option>
+              <option value="VNBANK">VNBANK (ATM nội địa)</option>
+              <option value="INTCARD">INTCARD (Thẻ quốc tế)</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-2">
+              Thẻ test sandbox: NCB - 9704198526191432198 - NGUYEN VAN A - 07/15 - OTP 123456.
             </p>
           </div>
 
@@ -179,69 +163,8 @@ const JockeyWallet = () => {
             disabled={depositing || parseFloat(depositAmount) <= 0}
             className="w-full bg-[#D9A520] text-black font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
           >
-            {depositing ? "Đang tạo lệnh..." : "Tạo Lệnh Nạp"}
+            {depositing ? "Đang chuyển hướng..." : "Nạp Tiền Qua VNPay"}
           </button>
-
-          {depositInfo && (
-            <div className="space-y-4 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 p-4">
-              <div className="flex justify-between gap-4 text-sm">
-                <span className="text-gray-400">Số tiền</span>
-                <span className="font-bold text-white">
-                  ₫ {depositInfo.amount?.toLocaleString("vi-VN") || "0"} {depositInfo.currency || "VND"}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Ngân hàng</p>
-                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
-                    {depositInfo.bank?.code || "---"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Bank Tag</p>
-                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">
-                    {depositInfo.bankTag || "---"}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Số TK</p>
-                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
-                    {depositInfo.bank?.accountNumber || "4444666677"}
-                  </p>
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tên chủ tài khoản</p>
-                  <p className="rounded-xl bg-black/40 px-4 py-3 text-sm text-white break-all">
-                    {depositInfo.bank?.accountName || "CONG TY TNHH YZ"}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Nội dung chuyển khoản</p>
-                <p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-black text-[#D9A520] break-all">
-                  {depositInfo.memo}
-                </p>
-              </div>
-              {depositInfo.qrUrl && (
-                <div className="flex flex-col gap-2">
-                  <a
-                    href={depositInfo.qrUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl bg-black/80 px-4 py-3 text-sm font-semibold text-[#D9A520] hover:bg-white/5 transition"
-                  >
-                    Mở mã QR nạp tiền
-                  </a>
-                  <p className="text-xs text-gray-400">
-                    Quét QR bằng app ngân hàng hoặc mở QR trên SePay sandbox.
-                  </p>
-                </div>
-              )}
-              <p className="text-xs leading-relaxed text-gray-400">{depositInfo.note}</p>
-            </div>
-          )}
         </div>
       </div>
 
