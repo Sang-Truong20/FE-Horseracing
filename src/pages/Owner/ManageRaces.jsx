@@ -30,7 +30,9 @@ const ManageRaces = () => {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutError, setPayoutError] = useState(null);
   const [ownerHorses, setOwnerHorses] = useState([]);
-  const [form, setForm] = useState({ horseId: "", hireFee: "", jockeyBonusPercent: "" });
+  const [ownerJockeys, setOwnerJockeys] = useState([]);
+  const [form, setForm] = useState({ horseId: "", jockeyId: "", hireFee: "", jockeyBonusPercent: "" });
+  const [registering, setRegistering] = useState(false);
 
   const fetchRaces = async (s) => {
     setLoading(true);
@@ -97,7 +99,18 @@ const ManageRaces = () => {
         // ignore
       }
     };
+    const fetchOwnerJockeys = async () => {
+      try {
+        const res = await api.get("/api/owner/jockeys");
+        if (res.data?.status === "Success") {
+          setOwnerJockeys(res.data.data || res.data.jockeys || []);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
     fetchOwnerHorses();
+    fetchOwnerJockeys();
   }, [status]);
 
   return (
@@ -154,7 +167,7 @@ const ManageRaces = () => {
                         <button
                           onClick={() => {
                             setSelectedRace(race);
-                            setForm({ horseId: ownerHorses[0]?._id || "", hireFee: "", jockeyBonusPercent: "" });
+                            setForm({ horseId: ownerHorses[0]?._id || "", jockeyId: "", hireFee: "", jockeyBonusPercent: "" });
                             setShowRegisterModal(true);
                           }}
                           className="px-3 py-2 bg-[#D9A520] text-black rounded-xl font-black text-xs"
@@ -245,6 +258,17 @@ const ManageRaces = () => {
                 {ownerHorses.map(h=> <option key={h._id} value={h._id}>{h.name}</option>)}
               </select>
 
+              <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black md:col-span-2">Jockey (tùy chọn)</label>
+              <select value={form.jockeyId} onChange={(e)=>setForm(f=>({...f, jockeyId:e.target.value}))} className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white md:col-span-2">
+                <option value="">-- Dùng jockey mặc định của ngựa --</option>
+                {ownerJockeys.map((j)=> {
+                  const id = j._id || j.id || j.jockeyId;
+                  const name = j.fullName || j.name || j.username || id;
+                  return <option key={id} value={id}>{name}</option>;
+                })}
+              </select>
+              <p className="text-[10px] text-gray-500 md:col-span-2">Để trống nếu muốn dùng jockey đang gắn sẵn với ngựa.</p>
+
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Hire Fee</label>
               <label className="text-[10px] uppercase tracking-widest text-gray-400 font-black">Jockey Bonus %</label>
               <input type="number" value={form.hireFee} onChange={(e)=>setForm(f=>({...f,hireFee:e.target.value}))} placeholder="500000" className="bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white" />
@@ -254,17 +278,21 @@ const ManageRaces = () => {
           <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-[#04070C]">
             <button onClick={()=>setShowRegisterModal(false)} className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-gray-300 hover:bg-white/5">Hủy</button>
             <button
+              disabled={registering}
               onClick={async ()=>{
                 if (!form.horseId) {
                   alertFail('Vui lòng chọn ngựa');
                   return;
                 }
+                setRegistering(true);
                 try{
                   const payload = {
                     horseId: form.horseId,
                     hireFee: Number(form.hireFee) || 0,
                     jockeyBonusPercent: Number(form.jockeyBonusPercent) || 0,
                   };
+                  // Chỉ gửi jockeyId khi owner chọn cụ thể; bỏ trống để backend tự dùng horse.currentJockey.
+                  if (form.jockeyId) payload.jockeyId = form.jockeyId;
                   const res = await api.post(`/api/owner/races/${selectedRace._id}/register`, payload);
                   if(res.data?.status === 'Success' || res.status===201){
                     alertSuccess(res.data?.message || 'Đăng ký thành công');
@@ -274,11 +302,19 @@ const ManageRaces = () => {
                     alertFail(res.data?.message || 'Đăng ký thất bại');
                   }
                 }catch(err){
-                  alertFail(err.response?.data?.message || err.message || 'Lỗi khi đăng ký');
+                  const data = err.response?.data;
+                  // Backend gợi ý truyền jockeyId khác (conflict jockey mặc định).
+                  if (data?.data?.suggestion === 'PASS_DIFFERENT_JOCKEY_ID') {
+                    alertFail(data?.message || 'Jockey mặc định đang bận trong race này. Vui lòng chọn jockey khác.');
+                  } else {
+                    alertFail(data?.message || err.message || 'Lỗi khi đăng ký');
+                  }
+                } finally {
+                  setRegistering(false);
                 }
               }}
               className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase tracking-[0.2em] text-black shadow-lg hover:opacity-90"
-            >Đăng ký</button>
+            >{registering ? 'Đang đăng ký...' : 'Đăng ký'}</button>
           </div>
         </div>
       </div>
