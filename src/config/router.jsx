@@ -16,7 +16,6 @@ import AdminJockeys from "../pages/Admin/AdminJockeys";
 import AdminRaces from "../pages/Admin/AdminRaces";
 import AdminGifts from "../pages/Admin/AdminGifts";
 
-=======
 import AdminReferees from "../pages/Admin/AdminReferees";
 
 import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
@@ -29,6 +28,7 @@ import JockeyIncome from "../pages/Jockey/JockeyIncome";
 import JockeyWallet from "../pages/Jockey/JockeyWallet";
 import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
+import PaymentResult from "../pages/PaymentResult";
 
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
@@ -49,6 +49,10 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+  },
+  {
+    path: "/payment-result",
+    element: <PaymentResult />,
   },
   {
     path: "/owner",

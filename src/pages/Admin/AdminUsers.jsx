@@ -194,7 +194,7 @@ const AdminUsers = () => {
 
   const handleLockUser = async (user) => {
     // TODO: call API lock/unlock account
-    alert(`Khóa/Mở khóa tài khoản "${user.fullName}" thành công!`);
+    message.info(`Khóa/Mở khóa tài khoản "${user.fullName}" thành công!`);
   };
 
   return (
