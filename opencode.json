@@ -5,7 +5,7 @@
     "zplay": {
       "api": "openai",
       "options": {
-        "apiKey": "sk-539c287a479a4486e54e4c3a5e7055110ec48804722883dc",
+        "apiKey": "sk-f0d2bff65fd308d3361bed75d085fc534d942efa0b7988fc",
         "baseURL": "https://zplay.io.vn/v1"
       },
       "models": {
