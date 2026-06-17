@@ -19,6 +19,7 @@ const useNotifications = ({ unreadOnly = false, limit = 50, enabled = true } = {
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [markingReadIds, setMarkingReadIds] = useState([]);
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -66,12 +67,42 @@ const useNotifications = ({ unreadOnly = false, limit = 50, enabled = true } = {
 
   const refetch = () => setRefreshTick((value) => value + 1);
 
+  const markAsRead = async (notificationId) => {
+    if (!notificationId || markingReadIds.includes(notificationId)) return;
+
+    setMarkingReadIds((current) => [...current, notificationId]);
+
+    const target = items.find((item) => item._id === notificationId);
+    const wasUnread = Boolean(target && !target.read);
+
+    try {
+      await api.patch(`/api/notifications/${notificationId}/read`);
+
+      setItems((current) =>
+        current.map((item) =>
+          item._id === notificationId ? { ...item, read: true } : item,
+        ),
+      );
+
+      if (wasUnread) {
+        setUnreadCount((current) => Math.max(0, current - 1));
+      }
+    } catch (fetchError) {
+      setError(fetchError);
+      throw fetchError;
+    } finally {
+      setMarkingReadIds((current) => current.filter((id) => id !== notificationId));
+    }
+  };
+
   return {
     items,
     unreadCount,
     loading,
     error,
     refetch,
+    markAsRead,
+    markingReadIds,
   };
 };
 
