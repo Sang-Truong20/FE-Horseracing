@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { LayoutDashboard, Calendar, Bell, Wallet, Settings, LogOut, Award, Smartphone } from 'lucide-react'; // Hoặc lucide-react
 import { logout } from '../redux/features/userSlice';
+import NotificationMenu from '../components/NotificationMenu';
 
 const JockeyLayout = ({ children }) => {
   const dispatch = useDispatch();
@@ -97,6 +98,11 @@ const JockeyLayout = ({ children }) => {
              <button className="flex items-center gap-2 text-sm text-[#EBCB75] bg-[#EBCB75]/10 px-3 py-1.5 rounded-lg border border-[#EBCB75]/20 hover:bg-[#EBCB75]/20 transition-all">
                 <Smartphone size={16}/> Tải ứng dụng
              </button>
+             <NotificationMenu
+               buttonClassName="relative flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition-all hover:bg-white/10 hover:text-white"
+               unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
+               panelClassName="right-0"
+             />
           </div>
         </header>
 

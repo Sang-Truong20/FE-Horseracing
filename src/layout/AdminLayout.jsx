@@ -2,6 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/features/userSlice";
 import { NavLink, useNavigate } from "react-router-dom";
+import NotificationMenu from "../components/NotificationMenu";
 import {
   DashboardOutlined,
   UserOutlined,
@@ -140,6 +141,15 @@ const AdminLayout = ({ children }) => {
             </NavLink>
           </div>
         </nav>
+
+        <div className="px-4 py-2">
+          <NotificationMenu
+            buttonClassName="relative flex w-full items-center justify-between space-x-3 rounded-lg px-4 py-2 text-gray-300 transition hover:bg-purple-500/20 hover:text-white"
+            unreadDotClassName="absolute top-1 right-2 min-w-5 h-5 rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
+            panelClassName="left-4 right-4 w-auto"
+            placementClassName="left-0"
+          />
+        </div>
 
         {/* User Info & Logout */}
         <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-700">

@@ -5,9 +5,10 @@ import { useLocation } from "react-router-dom";
 import { logout, loginSuccess } from "../redux/features/userSlice";
 import api from "../config/axios";
 import { alertSuccess, alertFail } from "../assets/hook/useNotification";
+import NotificationMenu from "../components/NotificationMenu";
 import { 
   LayoutDashboard, Users, ClipboardList, Wallet, 
-  Trophy, Flame, DollarSign, LogOut, Search, Bell, PlusCircle
+  Trophy, Flame, DollarSign, LogOut, Search, PlusCircle
 } from "lucide-react";
 
 const OwnerLayout = ({ children }) => {
@@ -166,10 +167,11 @@ const OwnerLayout = ({ children }) => {
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
                 <input type="text" placeholder="Tìm kiếm ngựa..." className="bg-black/50 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[#D9A520]/50 w-64 transition-all" />
              </div>
-             <button className="p-2.5 bg-white/5 rounded-xl text-gray-400 hover:text-white relative transition-colors">
-                <Bell size={20}/>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-black"></span>
-             </button>
+              <NotificationMenu
+                buttonClassName="p-2.5 bg-white/5 rounded-xl text-gray-400 hover:text-white relative transition-colors"
+                unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full border-2 border-black bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
+                panelClassName="right-0"
+              />
              <button
                onClick={() => setShowAddHorseModal(true)}
                className="flex items-center space-x-2 bg-[#D9A520] text-black font-black px-5 py-2.5 rounded-xl shadow-[0_5px_15px_rgba(217,165,32,0.2)] hover:opacity-90 transition-all text-xs uppercase tracking-tighter"
