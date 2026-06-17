@@ -135,9 +135,7 @@ const JockeyWallet = () => {
                 className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.
-            </p>
+            <p className="text-xs text-gray-500 mt-2">Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.</p>
           </div>
 
           <div>
