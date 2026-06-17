@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { LogOut, Search, ShieldCheck, ClipboardList, Hammer, DollarSign, Users } from "lucide-react";
 import { logout } from "../redux/features/userSlice";
+import NotificationMenu from "../components/NotificationMenu";
 
 const RefereeLayout = ({ children }) => {
   const dispatch = useDispatch();
@@ -115,6 +116,11 @@ const RefereeLayout = ({ children }) => {
             <p className="mt-2 text-sm text-gray-400">Nắm bắt nhanh trạng thái cuộc đua và kết quả.</p>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationMenu
+              buttonClassName="relative rounded-3xl border border-white/10 bg-white/5 p-3 text-gray-300 transition-all hover:bg-white/10 hover:text-white"
+              unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
+              panelClassName="right-0"
+            />
             <div className="relative rounded-3xl bg-[#0F1322] border border-white/10 px-4 py-3">
               <Search size={18} className="text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
