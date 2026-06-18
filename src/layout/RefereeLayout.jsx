@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { LogOut, Search, ShieldCheck } from "lucide-react";
+import { LogOut, Search, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
 import { logout } from "../redux/features/userSlice";
 import NotificationMenu from "../components/NotificationMenu";
 
@@ -19,7 +19,9 @@ const RefereeLayout = ({ children }) => {
   const location = useLocation();
 
   const menuItems = [
-    { label: "Trọng Tài Race Ngựa", icon: <ShieldCheck size={18} />, path: "/referee" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/referee/dashboard" },
+    { label: "Race được giao", icon: <Flag size={18} />, path: "/referee/races" },
+    { label: "Danh sách chờ duyệt", icon: <Users size={18} />, path: "/referee/pending" },
   ];
 
   return (
@@ -35,13 +37,13 @@ const RefereeLayout = ({ children }) => {
               <h1 className="text-xl font-black tracking-tight">Race Referee</h1>
             </div>
           </div>
-          <p className="text-sm text-gray-400">Duyệt jockey và preview/chốt kết quả cuộc đua ngựa.</p>
+          <p className="text-sm text-gray-400">Duyệt jockey, xem race được giao và xử lý kết quả cuộc đua ngựa.</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-3">Chức năng trọng tài</p>
+            <p className="mb-3 text-[10px] uppercase tracking-[0.3em] text-gray-500">Chức năng trọng tài</p>
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || (item.path !== "/referee/dashboard" && location.pathname.startsWith(item.path));
             return (
               <button
                 key={item.label}
@@ -52,7 +54,6 @@ const RefereeLayout = ({ children }) => {
                   {item.icon}
                   {item.label}
                 </span>
-                {item.path === "/referee" && <span className="rounded-full bg-[#D9A520] px-2 py-1 text-[10px] font-black text-black">3</span>}
               </button>
             );
           })}
