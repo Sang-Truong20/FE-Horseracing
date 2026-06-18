@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Wallet, DollarSign, Send, TrendingUp, History, AlertCircle, CreditCard } from "lucide-react";
+import { Wallet, Send, TrendingUp, History, AlertCircle, CreditCard } from "lucide-react";
 import api from "../../config/axios";
 
 const ManageWallet = () => {
   const [wallet, setWallet] = useState(null);
-  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showTransactions, setShowTransactions] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState(null);
+  const [transactionType, setTransactionType] = useState("all");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
   const [depositError, setDepositError] = useState(null);
@@ -20,6 +24,53 @@ const ManageWallet = () => {
   const [withdrawError, setWithdrawError] = useState(null);
   const [withdrawMessage, setWithdrawMessage] = useState(null);
 
+  const transactionTypeOptions = [
+    { value: "all", label: "Tất cả" },
+    { value: "Deposit", label: "Deposit" },
+    { value: "Refund", label: "Refund" },
+    { value: "Prize", label: "Prize" },
+    { value: "HireFeeIn", label: "HireFeeIn" },
+    { value: "Bonus", label: "Bonus" },
+    { value: "Withdraw", label: "Withdraw" },
+    { value: "EntryFee", label: "EntryFee" },
+    { value: "HireFeeOut", label: "HireFeeOut" },
+    { value: "Adjustment", label: "Adjustment" },
+  ];
+
+  const getTransactionMeta = (type, amount) => {
+    const normalizedType = type || "Adjustment";
+    const creditTypes = ["Deposit", "Refund", "Prize", "HireFeeIn", "Bonus"];
+    const debitTypes = ["Withdraw", "EntryFee", "HireFeeOut"];
+    const isCredit = creditTypes.includes(normalizedType);
+    const isDebit = debitTypes.includes(normalizedType);
+    const direction = isCredit ? "credit" : isDebit ? "debit" : Number(amount) < 0 ? "debit" : "credit";
+
+    const labels = {
+      Deposit: "Nạp qua VNPay",
+      Refund: "Hoàn entry fee",
+      Prize: "Tiền thưởng race",
+      HireFeeIn: "Jockey nhận tiền thuê",
+      Bonus: "Jockey nhận bonus %",
+      Withdraw: "Yêu cầu rút",
+      EntryFee: "Owner trả phí đăng ký race",
+      HireFeeOut: "Owner trả tiền thuê jockey",
+      Adjustment: "Admin override",
+    };
+
+    return {
+      type: normalizedType,
+      label: labels[normalizedType] || normalizedType,
+      direction,
+      toneClass: direction === "debit" ? "text-red-400" : "text-green-400",
+      badgeClass: direction === "debit" ? "bg-red-500/20 text-red-300" : "bg-green-500/20 text-green-300",
+    };
+  };
+
+  const extractTransactions = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    return payload?.transactions || payload?.items || payload?.data || [];
+  };
+
   const fetchWallet = async () => {
     setLoading(true);
     setError(null);
@@ -27,7 +78,6 @@ const ManageWallet = () => {
       const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
-        setTransactions(response.data.data?.transactions || []);
       } else {
         setError(response.data?.message || "Không thể tải dữ liệu ví");
       }
@@ -75,6 +125,40 @@ const ManageWallet = () => {
     } finally {
       setDepositing(false);
     }
+  };
+
+  const fetchTransactions = async (nextType = transactionType) => {
+    setTransactionsLoading(true);
+    setTransactionsError(null);
+    try {
+      const params = { limit: 50 };
+      if (nextType && nextType !== "all") params.type = nextType;
+
+      const response = await api.get("/api/wallet/transactions", { params });
+      if (response.data?.status === "Success") {
+        setTransactions(extractTransactions(response.data.data));
+      } else {
+        setTransactionsError(response.data?.message || "Không thể tải lịch sử giao dịch");
+      }
+    } catch (err) {
+      setTransactionsError(err.response?.data?.message || err.message || "Lỗi khi gọi API lịch sử giao dịch");
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const handleToggleTransactions = async () => {
+    const nextOpen = !showTransactions;
+    setShowTransactions(nextOpen);
+    if (nextOpen && transactions.length === 0) {
+      await fetchTransactions(transactionType);
+    }
+  };
+
+  const handleTransactionTypeChange = async (type) => {
+    setTransactionType(type);
+    setShowTransactions(true);
+    await fetchTransactions(type);
   };
 
   const handleWithdraw = async () => {
@@ -324,11 +408,19 @@ const ManageWallet = () => {
 
         {/* Statistics */}
         <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-purple-500/20 p-3 rounded-2xl">
-              <TrendingUp size={24} className="text-purple-400" />
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-500/20 p-3 rounded-2xl">
+                <TrendingUp size={24} className="text-purple-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Thống Kê</h3>
             </div>
-            <h3 className="text-lg font-bold text-white">Thống Kê</h3>
+            <button
+              onClick={handleToggleTransactions}
+              className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+            >
+              {showTransactions ? "Ẩn lịch sử" : "Xem lịch sử giao dịch"}
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -349,81 +441,78 @@ const ManageWallet = () => {
       </div>
 
       {/* TRANSACTION HISTORY */}
-      <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl">
-        {/* Header */}
-        <div className="p-8 border-b border-white/5 flex items-center gap-3">
-          <div className="bg-blue-500/20 p-3 rounded-2xl">
-            <History size={24} className="text-blue-400" />
+      {showTransactions && (
+        <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl">
+          <div className="p-8 border-b border-white/5 flex items-center gap-3">
+            <div className="bg-blue-500/20 p-3 rounded-2xl">
+              <History size={24} className="text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Lịch Sử Giao Dịch</h3>
+              <p className="text-xs text-gray-400 mt-1">Tất cả các giao dịch trong ví của bạn</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-white">Lịch Sử Giao Dịch</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Tất cả các giao dịch trong ví của bạn
-            </p>
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-8">
-          {loading ? (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-sm">Đang tải lịch sử giao dịch...</p>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-sm">Chưa có giao dịch nào</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {transactions.map((tx, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
-                >
-                  <div className="flex items-center gap-4 flex-1">
+          <div className="px-8 pt-6 flex flex-wrap gap-2">
+            {transactionTypeOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleTransactionTypeChange(option.value)}
+                className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all ${
+                  transactionType === option.value
+                    ? "border-[#D9A520] bg-[#D9A520] text-black"
+                    : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-8">
+            {transactionsLoading ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">Đang tải lịch sử giao dịch...</p>
+              </div>
+            ) : transactionsError ? (
+              <div className="text-center py-12 text-red-400">{transactionsError}</div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-sm">Chưa có giao dịch nào</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {transactions.map((tx, idx) => {
+                  const meta = getTransactionMeta(tx.type, tx.amount);
+                  return (
                     <div
-                      className={`p-3 rounded-xl ${
-                        tx.type === "income"
-                          ? "bg-green-500/20"
-                          : "bg-red-500/20"
-                      }`}
+                      key={idx}
+                      className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
                     >
-                      <DollarSign
-                        size={20}
-                        className={
-                          tx.type === "income"
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }
-                      />
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-widest ${meta.badgeClass}`}>
+                          {meta.type}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-white">{meta.label}</p>
+                          <p className="text-xs text-gray-500">
+                            {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold text-sm ${meta.toneClass}`}>
+                          {meta.direction === "debit" ? "-" : "+"} ₫ {Number(tx.amount || 0).toLocaleString("vi-VN")}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-white">
-                        {tx.description || "Giao dịch"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(tx.date).toLocaleDateString("vi-VN")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-bold text-sm ${
-                        tx.type === "income"
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {tx.type === "income" ? "+" : "-"} ₫{" "}
-                      {tx.amount?.toLocaleString("vi-VN")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* WARNING */}
       <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-6">

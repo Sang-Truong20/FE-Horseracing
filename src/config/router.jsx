@@ -28,6 +28,7 @@ import JockeyIncome from "../pages/Jockey/JockeyIncome";
 import JockeyWallet from "../pages/Jockey/JockeyWallet";
 import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
+import RefereeRaceDetail from "../pages/Referee/RefereeRaceDetail";
 import PaymentResult from "../pages/PaymentResult";
 
 const ProtectedRoute = ({ allowRole }) => {
@@ -158,7 +159,23 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <Navigate to="dashboard" replace />,
+      },
+      {
+        path: "dashboard",
         element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "races",
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "pending",
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "races/:id",
+        element: <RefereeLayout><RefereeRaceDetail /></RefereeLayout>,
       },
     ],
   },

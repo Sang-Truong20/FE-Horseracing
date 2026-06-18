@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { LogOut, Search, ShieldCheck, ClipboardList, Hammer, DollarSign, Users } from "lucide-react";
+import { LogOut, Search, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
 import { logout } from "../redux/features/userSlice";
 import NotificationMenu from "../components/NotificationMenu";
 
@@ -19,11 +19,9 @@ const RefereeLayout = ({ children }) => {
   const location = useLocation();
 
   const menuItems = [
-    { label: "Xem Cuộc Đua Được Giao", icon: <ShieldCheck size={18} />, path: "/referee" },
-    { label: "Duyệt Đăng Ký Jockey", icon: <Users size={18} />, path: "/referee/approve" },
-    { label: "Từ Chối Đăng Ký Jockey", icon: <Hammer size={18} />, path: "/referee/reject" },
-    { label: "Nhập Kết Quả Cuộc Đua", icon: <ClipboardList size={18} />, path: "/referee/results" },
-    { label: "Chia Tiền Thưởng & Phí Thuế", icon: <DollarSign size={18} />, path: "/referee/payout" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/referee/dashboard" },
+    { label: "Race được giao", icon: <Flag size={18} />, path: "/referee/races" },
+    { label: "Danh sách chờ duyệt", icon: <Users size={18} />, path: "/referee/pending" },
   ];
 
   return (
@@ -36,16 +34,16 @@ const RefereeLayout = ({ children }) => {
             </div>
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Thunder</p>
-              <h1 className="text-xl font-black tracking-tight">Referee Panel</h1>
+              <h1 className="text-xl font-black tracking-tight">Race Referee</h1>
             </div>
           </div>
-          <p className="text-sm text-gray-400">Trang quản lý cuộc đua giao cho referee.</p>
+          <p className="text-sm text-gray-400">Duyệt jockey, xem race được giao và xử lý kết quả cuộc đua ngựa.</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-3">Chức năng chính</p>
+            <p className="mb-3 text-[10px] uppercase tracking-[0.3em] text-gray-500">Chức năng trọng tài</p>
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || (item.path !== "/referee/dashboard" && location.pathname.startsWith(item.path));
             return (
               <button
                 key={item.label}
@@ -56,36 +54,13 @@ const RefereeLayout = ({ children }) => {
                   {item.icon}
                   {item.label}
                 </span>
-                {item.path === "/referee" && <span className="rounded-full bg-[#D9A520] px-2 py-1 text-[10px] font-black text-black">3</span>}
               </button>
             );
           })}
 
           <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-4 space-y-3">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500">Thống kê</p>
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between rounded-3xl bg-[#141B2F] px-4 py-4">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">Cuộc đua được giao</p>
-                  <p className="text-lg font-black text-white">3</p>
-                </div>
-                <div className="rounded-2xl bg-[#203A70] px-3 py-2 text-xs text-[#8DB9FF]">Active</div>
-              </div>
-              <div className="flex items-center justify-between rounded-3xl bg-[#141B2F] px-4 py-4">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">Jockey chờ duyệt</p>
-                  <p className="text-lg font-black text-white">9</p>
-                </div>
-                <div className="rounded-2xl bg-[#5B3CFF]/20 px-3 py-2 text-xs text-[#A39DFF]">Review</div>
-              </div>
-              <div className="flex items-center justify-between rounded-3xl bg-[#141B2F] px-4 py-4">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">Chờ chia thưởng</p>
-                  <p className="text-lg font-black text-white">1</p>
-                </div>
-                <div className="rounded-2xl bg-[#24C482]/20 px-3 py-2 text-xs text-[#7DE8B2]">Pending</div>
-              </div>
-            </div>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-gray-500">Luồng xử lý</p>
+            <p className="text-sm text-gray-400">Dashboard hiển thị race theo bucket, danh sách jockey pending, detail race và preview xếp hạng.</p>
           </div>
         </div>
 
@@ -111,9 +86,9 @@ const RefereeLayout = ({ children }) => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-white/10 bg-[#090B15] px-8 py-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Referee Panel</p>
-            <h2 className="text-3xl font-black tracking-tight text-white">Xem Cuộc Đua Được Giao</h2>
-            <p className="mt-2 text-sm text-gray-400">Nắm bắt nhanh trạng thái cuộc đua và kết quả.</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Race Referee</p>
+            <h2 className="text-3xl font-black tracking-tight text-white">Trọng Tài Cuộc Đua Ngựa</h2>
+            <p className="mt-2 text-sm text-gray-400">Duyệt jockey, xem race được phân công và preview kết quả.</p>
           </div>
           <div className="flex items-center gap-3">
             <NotificationMenu
@@ -129,9 +104,6 @@ const RefereeLayout = ({ children }) => {
                 className="bg-transparent pl-11 pr-4 text-sm text-white outline-none placeholder:text-gray-500"
               />
             </div>
-            <button className="rounded-3xl bg-gradient-to-r from-[#4D7CFF] to-[#26D7C8] px-6 py-3 text-sm font-black text-black uppercase tracking-[0.12em] shadow-[0_15px_40px_rgba(77,124,255,0.25)] hover:brightness-105 transition-all">
-              Nhập Kết Quả
-            </button>
           </div>
         </header>
 
