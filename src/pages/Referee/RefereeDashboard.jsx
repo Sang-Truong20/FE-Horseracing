@@ -21,6 +21,15 @@ const formatDate = (dateString) => {
   });
 };
 
+const normalizeRaces = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.races)) return payload.races;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (payload && typeof payload === "object") return [payload];
+  return [];
+};
+
 const RefereeDashboard = () => {
   const [races, setRaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +42,7 @@ const RefereeDashboard = () => {
       try {
         const response = await api.get("/api/referee/races");
         if (response.data?.status === "Success") {
-          setRaces(response.data.data || []);
+          setRaces(normalizeRaces(response.data.data));
         } else {
           setError(response.data?.message || "Không thể tải danh sách cuộc đua.");
         }

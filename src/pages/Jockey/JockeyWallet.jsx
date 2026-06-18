@@ -199,36 +199,32 @@ const JockeyWallet = () => {
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {transactions.map((tx, idx) => (
-                {
-                  (() => {
-                    const meta = getTransactionMeta(tx.type, tx.amount);
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-widest ${meta.badgeClass}`}>
-                            {meta.type}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-bold text-white">{meta.label}</p>
-                            <p className="text-xs text-gray-500">
-                              {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-bold text-sm ${meta.toneClass}`}>
-                            {meta.direction === "debit" ? "-" : "+"} ₫ {Number(tx.amount || 0).toLocaleString("vi-VN")}
-                          </p>
-                        </div>
+              {transactions.map((tx, idx) => {
+                const meta = getTransactionMeta(tx.type, tx.amount);
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-widest ${meta.badgeClass}`}>
+                        {meta.type}
                       </div>
-                    );
-                  })()
-                }
-              ))}
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white">{meta.label}</p>
+                        <p className="text-xs text-gray-500">
+                          {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold text-sm ${meta.toneClass}`}>
+                        {meta.direction === "debit" ? "-" : "+"} ₫ {Number(tx.amount || 0).toLocaleString("vi-VN")}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
