@@ -24,10 +24,19 @@ const PaymentResult = () => {
 
   const attemptsRef = useRef(0);
   const timerRef = useRef(null);
+  const ipnCalledRef = useRef(false);
 
   const txId = searchParams.get("txId") || localStorage.getItem("pendingDepositTxId");
   const vnpResponseCode = searchParams.get("vnp_ResponseCode");
   const walletPath = resolveWalletPath(user?.role);
+
+  const vnpIpnParams = new URLSearchParams(
+    Array.from(searchParams.entries()).filter(([key]) => key.startsWith("vnp_") || key === "txId")
+  );
+
+  if (txId && !vnpIpnParams.get("vnp_TxnRef")) {
+    vnpIpnParams.set("vnp_TxnRef", txId);
+  }
 
   useEffect(() => {
     if (!txId) {
@@ -47,6 +56,16 @@ const PaymentResult = () => {
     const finish = (nextStatus) => {
       setStatus(nextStatus);
       localStorage.removeItem("pendingDepositTxId");
+    };
+
+    const callIpn = async () => {
+      if (ipnCalledRef.current) return;
+      if (!vnpIpnParams.get("vnp_TxnRef") || !vnpIpnParams.get("vnp_Amount") || !vnpIpnParams.get("vnp_SecureHash")) {
+        return;
+      }
+
+      ipnCalledRef.current = true;
+      await api.get(`/api/vnpay/ipn?${vnpIpnParams.toString()}`);
     };
 
     const poll = async () => {
@@ -83,7 +102,24 @@ const PaymentResult = () => {
       }
     };
 
-    poll();
+    const bootstrap = async () => {
+      try {
+        await callIpn();
+      } catch (err) {
+        console.error("Không gọi được IPN VNPay:", err);
+      }
+
+      if (vnpResponseCode && vnpResponseCode !== "00") {
+        setStatus("Failed");
+        setError("Giao dịch bị hủy hoặc thất bại trên VNPay.");
+        localStorage.removeItem("pendingDepositTxId");
+        return;
+      }
+
+      poll();
+    };
+
+    bootstrap();
 
     return () => clearTimeout(timerRef.current);
   }, [txId, vnpResponseCode]);

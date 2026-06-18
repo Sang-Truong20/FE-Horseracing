@@ -11,7 +11,6 @@ const JockeyWallet = () => {
   const [depositing, setDepositing] = useState(false);
   const [depositError, setDepositError] = useState(null);
   const [depositMessage, setDepositMessage] = useState(null);
-  const [depositBankCode, setDepositBankCode] = useState("NCB");
 
   const fetchWallet = async () => {
     setLoading(true);
@@ -49,7 +48,6 @@ const JockeyWallet = () => {
     try {
       const response = await api.post("/api/wallet/deposit", {
         amount: parseFloat(depositAmount),
-        bankCode: depositBankCode,
       });
       const data = response.data?.data ?? response.data ?? {};
       const paymentUrl = data.paymentUrl;
@@ -136,24 +134,6 @@ const JockeyWallet = () => {
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.</p>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
-              Ngân Hàng
-            </label>
-            <select
-              value={depositBankCode}
-              onChange={(e) => setDepositBankCode(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
-            >
-              <option value="NCB">NCB</option>
-              <option value="VNBANK">VNBANK (ATM nội địa)</option>
-              <option value="INTCARD">INTCARD (Thẻ quốc tế)</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              Thẻ test sandbox: NCB - 9704198526191432198 - NGUYEN VAN A - 07/15 - OTP 123456.
-            </p>
           </div>
 
           <button
