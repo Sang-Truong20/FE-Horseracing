@@ -12,6 +12,35 @@ const JockeyWallet = () => {
   const [depositError, setDepositError] = useState(null);
   const [depositMessage, setDepositMessage] = useState(null);
 
+  const getTransactionMeta = (type, amount) => {
+    const normalizedType = type || "Adjustment";
+    const creditTypes = ["Deposit", "Refund", "Prize", "HireFeeIn", "Bonus"];
+    const debitTypes = ["Withdraw", "EntryFee", "HireFeeOut"];
+    const isCredit = creditTypes.includes(normalizedType);
+    const isDebit = debitTypes.includes(normalizedType);
+    const direction = isCredit ? "credit" : isDebit ? "debit" : Number(amount) < 0 ? "debit" : "credit";
+
+    const labels = {
+      Deposit: "Nạp qua VNPay",
+      Refund: "Hoàn entry fee",
+      Prize: "Tiền thưởng race",
+      HireFeeIn: "Jockey nhận tiền thuê",
+      Bonus: "Jockey nhận bonus %",
+      Withdraw: "Yêu cầu rút",
+      EntryFee: "Owner trả phí đăng ký race",
+      HireFeeOut: "Owner trả tiền thuê jockey",
+      Adjustment: "Admin override",
+    };
+
+    return {
+      type: normalizedType,
+      label: labels[normalizedType] || normalizedType,
+      direction,
+      toneClass: direction === "debit" ? "text-red-400" : "text-green-400",
+      badgeClass: direction === "debit" ? "bg-red-500/20 text-red-300" : "bg-green-500/20 text-green-300",
+    };
+  };
+
   const fetchWallet = async () => {
     setLoading(true);
     setError(null);
@@ -171,48 +200,34 @@ const JockeyWallet = () => {
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {transactions.map((tx, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div
-                      className={`p-3 rounded-xl ${
-                        tx.type === "income"
-                          ? "bg-green-500/20"
-                          : "bg-red-500/20"
-                      }`}
-                    >
-                      <Wallet
-                        size={20}
-                        className={
-                          tx.type === "income"
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-white">
-                        {tx.description || "Giao dịch"}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-bold text-sm ${
-                        tx.type === "income"
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {tx.type === "income" ? "+" : "-"} ₫ {tx.amount?.toLocaleString("vi-VN")}
-                    </p>
-                  </div>
-                </div>
+                {
+                  (() => {
+                    const meta = getTransactionMeta(tx.type, tx.amount);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
+                      >
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className={`px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-widest ${meta.badgeClass}`}>
+                            {meta.type}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-white">{meta.label}</p>
+                            <p className="text-xs text-gray-500">
+                              {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold text-sm ${meta.toneClass}`}>
+                            {meta.direction === "debit" ? "-" : "+"} ₫ {Number(tx.amount || 0).toLocaleString("vi-VN")}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()
+                }
               ))}
             </div>
           )}
