@@ -148,6 +148,10 @@ const EndUserHome = () => {
   const [predictionHistoryStatus, setPredictionHistoryStatus] = useState("");
   const [loadingPredictionHistory, setLoadingPredictionHistory] = useState(false);
   const [predictionHistoryError, setPredictionHistoryError] = useState(null);
+  const [leaderboardModalOpen, setLeaderboardModalOpen] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState(null);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(null);
   const [currentUser, setCurrentUser] = useState(user || null);
   const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
   const [currentUserError, setCurrentUserError] = useState(null);
@@ -457,6 +461,32 @@ const EndUserHome = () => {
     await fetchPredictionHistory(status);
   };
 
+  const openRaceLeaderboard = async (race) => {
+    const raceId = race?._id || race?.raceId;
+    if (!raceId) {
+      setLeaderboardError("Không tìm thấy mã trận đấu.");
+      setLeaderboardModalOpen(true);
+      return;
+    }
+
+    setLeaderboardModalOpen(true);
+    setLoadingLeaderboard(true);
+    setLeaderboardError(null);
+    setLeaderboardData(null);
+    try {
+      const response = await api.get(`/api/races/${raceId}/leaderboard`);
+      if (response.data?.status === "Success") {
+        setLeaderboardData(response.data.data || null);
+      } else {
+        setLeaderboardError(response.data?.message || "Không thể tải bảng xếp hạng.");
+      }
+    } catch (error) {
+      setLeaderboardError(error.response?.data?.message || "Lỗi khi tải bảng xếp hạng.");
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
   const openUserDetail = () => {
     setUserMenuOpen(false);
     navigate("/profile");
@@ -688,7 +718,7 @@ const EndUserHome = () => {
                           <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Đăng ký</p>
                         </div>
                       </div>
-                      <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-[#04111d]">
+                      <button type="button" onClick={() => openRaceLeaderboard(race)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-[#04111d]">
                         <ShieldCheck size={16} />
                         Xem Chi Tiết Trận
                       </button>
@@ -999,6 +1029,80 @@ const EndUserHome = () => {
             >
               Đóng
             </button>
+          </div>
+        </div>
+      )}
+
+      {leaderboardModalOpen && (
+        <div className="fixed inset-0 z-[74] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[32px] border border-cyan-300/20 bg-[#08111f] p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">Bảng xếp hạng</p>
+                <h3 className="mt-2 text-2xl font-black text-white">{leaderboardData?.race?.name || "Chi tiết trận đấu"}</h3>
+                {leaderboardData?.race && (
+                  <p className="mt-2 text-sm text-slate-400">
+                    {leaderboardData.race.location || "Chưa có địa điểm"} - {formatRaceDate(leaderboardData.race.raceDate)}
+                  </p>
+                )}
+              </div>
+              <button type="button" onClick={() => setLeaderboardModalOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                Đóng
+              </button>
+            </div>
+
+            {loadingLeaderboard ? (
+              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-8 text-center text-slate-400">Đang tải bảng xếp hạng...</div>
+            ) : leaderboardError ? (
+              <div className="mt-6 rounded-[24px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{leaderboardError}</div>
+            ) : leaderboardData ? (
+              <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-slate-500">Trạng thái</p><p className="mt-1 font-black text-emerald-300">{leaderboardData.race?.status || "-"}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-slate-500">Số ngựa</p><p className="mt-1 font-black text-amber-300">{leaderboardData.participantCount ?? leaderboardData.leaderboard?.length ?? 0}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-slate-500">Cự ly</p><p className="mt-1 font-black text-cyan-300">{leaderboardData.race?.distanceM ? `${leaderboardData.race.distanceM}m` : "-"}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-slate-500">Giải thưởng</p><p className="mt-1 font-black text-white">{leaderboardData.race?.prizeMoney ? leaderboardData.race.prizeMoney.toLocaleString("vi-VN") : "0"}</p></div>
+                </div>
+
+                <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
+                  <div className="grid grid-cols-[70px_1.4fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                    <span>Hạng</span>
+                    <span>Ngựa</span>
+                    <span>Jockey</span>
+                    <span>Owner</span>
+                    <span>Odds</span>
+                  </div>
+                  {leaderboardData.leaderboard?.length ? (
+                    <div className="divide-y divide-white/10">
+                      {leaderboardData.leaderboard.map((item) => (
+                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.4fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-slate-300">
+                          <div className="font-black text-amber-300">#{item.rank || item.position || "-"}</div>
+                          <div>
+                            <p className="font-bold text-white">{item.horse?.name || "Ngựa chưa đặt tên"}</p>
+                            <p className="mt-1 text-xs text-slate-500">{item.horse?.registrationNumber || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{item.jockey?.fullName || "-"}</p>
+                            <p className="mt-1 text-xs text-slate-500">Rating: {item.jockey?.rating ?? "-"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{item.owner?.stableName || item.owner?.fullName || "-"}</p>
+                            <p className="mt-1 text-xs text-slate-500">{item.approvalStatus || "-"}</p>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            <p>T1: {item.oddTop1 ?? 0}</p>
+                            <p>T2: {item.oddTop2 ?? 0}</p>
+                            <p>T3: {item.oddTop3 ?? 0}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-slate-400">Chưa có dữ liệu bảng xếp hạng.</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
