@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   CalendarCheck2,
+  ChevronDown,
   ChevronRight,
   Check,
   Gift,
+  LogOut,
   Medal,
   Search,
   ShieldCheck,
@@ -13,6 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import api from "../../config/axios";
+import { loginSuccess, logout } from "../../redux/features/userSlice";
 
 const navItems = [
   { label: "Kết Quả", value: "races" },
@@ -63,6 +68,26 @@ const predictionTypes = [
   { value: "Top3", label: "Top 3", oddKey: "oddTop3" },
 ];
 
+const predictionStatuses = ["Pending", "Won", "Lost", "Refunded"];
+
+const getPredictionId = (prediction) => prediction?._id || prediction?.predictionId;
+
+const getRaceName = (prediction) => prediction?.race?.name || prediction?.raceName || prediction?.raceId?.name || "Cuộc đua";
+
+const getHorseName = (prediction) => prediction?.registration?.horse?.name || prediction?.horse?.name || prediction?.horseName || prediction?.registrationId?.horse?.name || "Ngựa chưa đặt tên";
+
+const formatPoints = (points) => Number(points || 0).toLocaleString("vi-VN");
+
+const getUserInitials = (user) => {
+  const source = user?.fullName || user?.username || user?.email || "U";
+  return source
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "U";
+};
+
 const getWinRate = (jockey) => {
   if (!jockey.totalRaces) return 0;
   return Math.round((jockey.totalWins / jockey.totalRaces) * 100);
@@ -94,6 +119,9 @@ const getWeekCheckInDays = (checkInStatus) => {
 };
 
 const EndUserHome = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user, token } = useSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState("races");
   const [races, setRaces] = useState([]);
   const [loadingRaces, setLoadingRaces] = useState(true);
@@ -114,6 +142,47 @@ const EndUserHome = () => {
   const [predictionForms, setPredictionForms] = useState({});
   const [predictionSubmittingId, setPredictionSubmittingId] = useState(null);
   const [predictionMessage, setPredictionMessage] = useState(null);
+  const [predictionModal, setPredictionModal] = useState(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [predictionHistory, setPredictionHistory] = useState([]);
+  const [predictionHistoryStatus, setPredictionHistoryStatus] = useState("");
+  const [loadingPredictionHistory, setLoadingPredictionHistory] = useState(false);
+  const [predictionHistoryError, setPredictionHistoryError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(user || null);
+  const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
+  const [currentUserError, setCurrentUserError] = useState(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userDetailModalOpen, setUserDetailModalOpen] = useState(false);
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
+  const [userDetailError, setUserDetailError] = useState(null);
+
+  useEffect(() => {
+    setCurrentUser(user || null);
+  }, [user]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      setLoadingCurrentUser(true);
+      setCurrentUserError(null);
+      try {
+        const response = await api.get("/api/auth/me");
+        if (response.data?.status === "Success" && response.data?.data) {
+          const nextUser = response.data.data;
+          const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
+          setCurrentUser(nextUser);
+          dispatch(loginSuccess({ user: nextUser, token: currentToken }));
+        } else {
+          setCurrentUserError(response.data?.message || "Không thể tải thông tin tài khoản.");
+        }
+      } catch (error) {
+        setCurrentUserError(error.response?.data?.message || "Lỗi khi tải thông tin tài khoản.");
+      } finally {
+        setLoadingCurrentUser(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [dispatch, token]);
 
   useEffect(() => {
     const fetchRaces = async () => {
@@ -221,12 +290,16 @@ const EndUserHome = () => {
       const response = await api.post("/api/enduser/check-in");
       if (response.data?.status === "Success") {
         const nextStatus = await refreshCheckInStatus().catch(() => null);
+        const nextPoints = response.data?.data?.points ?? response.data?.points ?? nextStatus?.points;
+        if (typeof nextPoints !== "undefined") {
+          setCurrentUser((current) => (current ? { ...current, points: nextPoints } : current));
+        }
         setCheckInModal({
           type: "success",
           title: "Điểm danh thành công",
           message: response.data?.message || "Bạn đã điểm danh thành công.",
           pointsEarned: response.data?.data?.pointsEarned ?? response.data?.pointsEarned ?? 0,
-          points: response.data?.data?.points ?? response.data?.points ?? nextStatus?.points ?? checkInStatus?.points ?? 0,
+          points: nextPoints ?? checkInStatus?.points ?? 0,
           checkInStreak: response.data?.data?.checkInStreak ?? response.data?.checkInStreak ?? nextStatus?.checkInStreak ?? checkInStatus?.checkInStreak ?? 0,
           totalCheckIns: response.data?.data?.totalCheckIns ?? response.data?.totalCheckIns ?? nextStatus?.totalCheckIns ?? checkInStatus?.totalCheckIns ?? 0,
         });
@@ -275,6 +348,27 @@ const EndUserHome = () => {
     }
   };
 
+  const openPredictionModal = (race, registration, predictionType = "Top1") => {
+    const raceId = race?._id || race?.raceId;
+    const registrationId = getRegistrationId(registration);
+
+    if (!raceId || !registrationId) {
+      setPredictionMessage({ type: "error", text: "Không tìm thấy mã trận đấu hoặc mã đăng ký." });
+      return;
+    }
+
+    setPredictionForms((current) => ({
+      ...current,
+      [registrationId]: {
+        stake: "",
+        ...current[registrationId],
+        predictionType,
+      },
+    }));
+    setPredictionModal({ race, registration });
+    setPredictionMessage(null);
+  };
+
   const updatePredictionForm = (registrationId, field, value) => {
     setPredictionForms((current) => ({
       ...current,
@@ -288,7 +382,14 @@ const EndUserHome = () => {
     setPredictionMessage(null);
   };
 
-  const submitPrediction = async (race, registration) => {
+  const closePredictionModal = () => {
+    if (predictionSubmittingId) return;
+    setPredictionModal(null);
+  };
+
+  const submitPrediction = async () => {
+    const race = predictionModal?.race;
+    const registration = predictionModal?.registration;
     const raceId = race?._id || race?.raceId;
     const registrationId = getRegistrationId(registration);
     const form = predictionForms[registrationId] || { predictionType: "Top1", stake: "" };
@@ -315,6 +416,7 @@ const EndUserHome = () => {
 
       if (response.data?.status === "Success") {
         setPredictionMessage({ type: "success", text: response.data?.message || "Đặt dự đoán thành công." });
+        setPredictionModal(null);
         setPredictionForms((current) => ({
           ...current,
           [registrationId]: { predictionType: form.predictionType || "Top1", stake: "" },
@@ -329,6 +431,65 @@ const EndUserHome = () => {
     }
   };
 
+  const fetchPredictionHistory = async (status = predictionHistoryStatus) => {
+    setLoadingPredictionHistory(true);
+    setPredictionHistoryError(null);
+    try {
+      const response = await api.get("/api/enduser/predictions", {
+        params: status ? { status } : undefined,
+      });
+      if (response.data?.status === "Success") {
+        setPredictionHistory(normalizeArray(response.data.data));
+      } else {
+        setPredictionHistoryError(response.data?.message || "Không thể tải lịch sử cược.");
+      }
+    } catch (error) {
+      setPredictionHistoryError(error.response?.data?.message || "Lỗi khi tải lịch sử cược.");
+    } finally {
+      setLoadingPredictionHistory(false);
+    }
+  };
+
+  const openPredictionHistory = async () => {
+    setHistoryModalOpen(true);
+    await fetchPredictionHistory(predictionHistoryStatus);
+  };
+
+  const changePredictionHistoryStatus = async (status) => {
+    setPredictionHistoryStatus(status);
+    await fetchPredictionHistory(status);
+  };
+
+  const openUserDetail = async () => {
+    setUserMenuOpen(false);
+    setUserDetailModalOpen(true);
+    setLoadingUserDetail(true);
+    setUserDetailError(null);
+    try {
+      const response = await api.get("/api/auth/me");
+      if (response.data?.status === "Success" && response.data?.data) {
+        const nextUser = response.data.data;
+        const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
+        setCurrentUser(nextUser);
+        dispatch(loginSuccess({ user: nextUser, token: currentToken }));
+      } else {
+        setUserDetailError(response.data?.message || "Không thể tải thông tin tài khoản.");
+      }
+    } catch (error) {
+      setUserDetailError(error.response?.data?.message || "Lỗi khi tải thông tin tài khoản.");
+    } finally {
+      setLoadingUserDetail(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUserMenuOpen(false);
+    dispatch(logout());
+    navigate("/login");
+  };
+
+  const displayUser = currentUser || user || {};
+  const displayPoints = displayUser.points ?? checkInStatus?.points ?? 0;
   const activeRaceCount = races.filter((race) => race.status === "Open" || race.status === "Locked").length;
 
   return (
@@ -378,10 +539,58 @@ const EndUserHome = () => {
             </button>
             <div className="flex items-center gap-2 rounded-xl bg-amber-400/10 px-3 py-2 text-amber-300 ring-1 ring-amber-300/20">
               <Star size={16} />
-              <span className="text-sm font-bold">4,280 điểm</span>
+              <span className="text-sm font-bold">{loadingCurrentUser ? "..." : formatPoints(displayPoints)} điểm</span>
             </div>
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-black text-[#05111c]">
-              HM
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((open) => !open)}
+                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-2 py-2 text-left hover:bg-white/10"
+              >
+                {displayUser.avatar ? (
+                  <img src={displayUser.avatar} alt={displayUser.fullName || displayUser.username || "User"} className="h-10 w-10 rounded-full object-cover" />
+                ) : (
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-black text-[#05111c]">
+                    {getUserInitials(displayUser)}
+                  </span>
+                )}
+                <ChevronDown size={16} className={userMenuOpen ? "rotate-180 text-cyan-300 transition" : "text-slate-400 transition"} />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 top-14 z-30 w-72 rounded-3xl border border-white/10 bg-[#0b1024] p-4 shadow-2xl ring-1 ring-cyan-400/10">
+                  <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                    {displayUser.avatar ? (
+                      <img src={displayUser.avatar} alt={displayUser.fullName || displayUser.username || "User"} className="h-12 w-12 rounded-2xl object-cover" />
+                    ) : (
+                      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-base font-black text-[#05111c]">
+                        {getUserInitials(displayUser)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">{displayUser.fullName || displayUser.username || "End User"}</p>
+                      <p className="truncate text-xs text-slate-400">{displayUser.email || "-"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 rounded-2xl bg-white/[0.04] p-3 text-sm">
+                    <div className="flex items-center justify-between"><span className="text-slate-400">Điểm</span><span className="font-black text-amber-300">{formatPoints(displayPoints)}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-slate-400">Hạng</span><span className="font-bold text-cyan-300">{displayUser.membershipLevel || "-"}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-slate-400">Trạng thái</span><span className="font-bold text-emerald-300">{displayUser.status || "-"}</span></div>
+                  </div>
+
+                  {currentUserError && <p className="mt-3 rounded-2xl bg-rose-500/10 p-3 text-xs text-rose-200">{currentUserError}</p>}
+
+                  <div className="mt-4 grid gap-2">
+                    <button type="button" onClick={openUserDetail} className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-sm font-bold text-white hover:bg-white/10">
+                      Xem chi tiết <ChevronRight size={16} />
+                    </button>
+                    <button type="button" onClick={handleLogout} className="flex items-center justify-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm font-black text-rose-200 hover:bg-rose-500/15">
+                      <LogOut size={16} /> Log out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -417,9 +626,15 @@ const EndUserHome = () => {
 
           <div className="mt-8 flex items-center justify-between">
             <h2 className="text-lg font-black">Trận Hôm Nay</h2>
-            <button type="button" className="inline-flex items-center gap-1 text-sm text-cyan-300">
-              Xem tất cả <ChevronRight size={16} />
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button type="button" onClick={openPredictionHistory} className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-sm font-bold text-amber-200 hover:bg-amber-300/15">
+                <Medal size={16} />
+                Lịch sử cược
+              </button>
+              <button type="button" className="inline-flex items-center gap-1 text-sm text-cyan-300">
+                Xem tất cả <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 space-y-4">
@@ -450,7 +665,6 @@ const EndUserHome = () => {
                       {race.registrations?.length ? (
                         race.registrations.map((registration, index) => {
                           const registrationId = getRegistrationId(registration);
-                          const predictionForm = predictionForms[registrationId] || { predictionType: "Top1", stake: "" };
                           const isPredicting = predictionSubmittingId === registrationId;
                           const canPredict = race.status === "Open";
 
@@ -463,37 +677,18 @@ const EndUserHome = () => {
                               <span className="font-bold text-amber-300">{getBestOdd(registration)}</span>
                             </div>
 
-                            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px_auto]">
-                              <select
-                                value={predictionForm.predictionType}
-                                onChange={(event) => updatePredictionForm(registrationId, "predictionType", event.target.value)}
-                                disabled={!canPredict || isPredicting}
-                                className="rounded-xl border border-white/10 bg-[#101a30] px-3 py-2 text-white outline-none focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {predictionTypes.map((type) => (
-                                  <option key={type.value} value={type.value}>
-                                    {type.label} - {registration[type.oddKey] ? `${registration[type.oddKey]}x` : "chưa có odds"}
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="number"
-                                min="1"
-                                step="1"
-                                value={predictionForm.stake}
-                                onChange={(event) => updatePredictionForm(registrationId, "stake", event.target.value)}
-                                disabled={!canPredict || isPredicting}
-                                className="rounded-xl border border-white/10 bg-[#101a30] px-3 py-2 text-white outline-none focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-                                placeholder="Điểm cược"
-                              />
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {predictionTypes.map((type) => (
                               <button
+                                key={type.value}
                                 type="button"
-                                onClick={() => submitPrediction(race, registration)}
+                                onClick={() => openPredictionModal(race, registration, type.value)}
                                 disabled={!canPredict || isPredicting}
                                 className="rounded-xl bg-gradient-to-r from-amber-300 to-orange-400 px-4 py-2 text-xs font-black text-[#1f1303] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                               >
-                                {isPredicting ? "Đang đặt..." : "Dự đoán"}
+                                {isPredicting ? "Đang đặt..." : `Dự đoán ${type.label}`}
                               </button>
+                              ))}
                             </div>
 
                             {!canPredict && <p className="mt-2 text-xs text-slate-500">Chỉ có thể dự đoán khi trận đang mở.</p>}
@@ -771,17 +966,17 @@ const EndUserHome = () => {
                 <Star size={16} className="text-amber-300" />
                 Điểm Của Tôi
               </div>
-              <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-[11px] font-semibold text-amber-300">Hạng Vàng</span>
+              <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-[11px] font-semibold text-amber-300">{displayUser.membershipLevel || "Thành viên"}</span>
             </div>
             <div className="mt-5 rounded-[24px] bg-gradient-to-b from-[#132744] to-[#0b1427] p-5 text-center ring-1 ring-cyan-400/10">
-              <p className="text-5xl font-black tracking-tight">4,280</p>
+              <p className="text-5xl font-black tracking-tight">{formatPoints(displayPoints)}</p>
               <p className="mt-2 text-sm text-slate-400">Điểm tích lũy</p>
               <div className="mt-5 h-2 rounded-full bg-white/5">
                 <div className="h-2 w-[62%] rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
               </div>
               <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                <span>4,280</span>
-                <span>5,000 - Bạch Kim</span>
+                <span>{formatPoints(displayPoints)}</span>
+                <span>{displayUser.membershipLevel || "Thành viên"}</span>
               </div>
             </div>
             <div className="mt-5 grid grid-cols-3 gap-3 text-center">
@@ -827,8 +1022,188 @@ const EndUserHome = () => {
           </div>
         </div>
       )}
+
+      {userDetailModalOpen && (
+        <div className="fixed inset-0 z-[78] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-[32px] border border-cyan-300/20 bg-[#08111f] p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-center gap-4">
+                {displayUser.avatar ? (
+                  <img src={displayUser.avatar} alt={displayUser.fullName || displayUser.username || "User"} className="h-16 w-16 rounded-2xl object-cover" />
+                ) : (
+                  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-xl font-black text-[#05111c]">
+                    {getUserInitials(displayUser)}
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">Thông tin tài khoản</p>
+                  <h3 className="mt-2 text-2xl font-black text-white">{displayUser.fullName || displayUser.username || "End User"}</h3>
+                  <p className="mt-1 text-sm text-slate-400">Dữ liệu được lấy trực tiếp từ API /api/auth/me.</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setUserDetailModalOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                Đóng
+              </button>
+            </div>
+
+            {loadingUserDetail ? (
+              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-8 text-center text-slate-400">Đang tải thông tin tài khoản...</div>
+            ) : userDetailError ? (
+              <div className="mt-6 rounded-[24px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{userDetailError}</div>
+            ) : (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {userDetailFields.map((field) => {
+                  const rawValue = displayUser[field.key];
+                  const value = field.format ? field.format(rawValue) : rawValue;
+                  return (
+                    <div key={field.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-xs uppercase tracking-[0.25em] text-slate-500">{field.label}</p>
+                      <p className="mt-2 break-words text-sm font-bold text-white">{value || "-"}</p>
+                    </div>
+                  );
+                })}
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Jockey yêu thích</p>
+                  <p className="mt-2 break-words text-sm font-bold text-white">{displayUser.favoriteJockeys?.length ? displayUser.favoriteJockeys.join(", ") : "-"}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {predictionModal && (() => {
+        const registration = predictionModal.registration;
+        const race = predictionModal.race;
+        const registrationId = getRegistrationId(registration);
+        const form = predictionForms[registrationId] || { predictionType: "Top1", stake: "" };
+        const selectedType = predictionTypes.find((type) => type.value === form.predictionType) || predictionTypes[0];
+        const isSubmitting = predictionSubmittingId === registrationId;
+
+        return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="w-full max-w-lg rounded-[32px] border border-amber-300/20 bg-[#0b1020] p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.35em] text-amber-300">Đặt dự đoán</p>
+            <h3 className="mt-2 text-2xl font-black text-white">{race?.name || "Cuộc đua"}</h3>
+            <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+              <p><span className="text-slate-500">Ngựa:</span> <span className="font-bold text-white">{registration?.horse?.name || "Ngựa chưa đặt tên"}</span></p>
+              <p className="mt-2"><span className="text-slate-500">Jockey:</span> <span className="font-bold text-white">{registration?.jockey?.fullName || "Chưa có jockey"}</span></p>
+              <p className="mt-2"><span className="text-slate-500">Loại cược:</span> <span className="font-bold text-amber-300">{selectedType.label} - {registration?.[selectedType.oddKey] ? `${registration[selectedType.oddKey]}x` : "chưa có odds"}</span></p>
+            </div>
+
+            <label className="mt-5 block text-sm font-bold text-slate-200">
+              Số điểm cần cược
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.stake}
+                onChange={(event) => updatePredictionForm(registrationId, "stake", event.target.value)}
+                disabled={isSubmitting}
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#101a30] px-4 py-3 text-white outline-none focus:border-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                placeholder="Nhập số điểm"
+              />
+            </label>
+
+            {predictionMessage?.type === "error" && (
+              <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-200">{predictionMessage.text}</div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button type="button" onClick={closePredictionModal} disabled={isSubmitting} className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60">
+                Hủy
+              </button>
+              <button type="button" onClick={submitPrediction} disabled={isSubmitting} className="rounded-2xl bg-gradient-to-r from-amber-300 to-orange-400 px-5 py-3 text-sm font-black text-[#1f1303] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+                {isSubmitting ? "Đang cược..." : "Cược"}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-[32px] border border-cyan-300/20 bg-[#08111f] p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">Lịch sử cược</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Danh sách các trận đã cược</h3>
+              </div>
+              <button type="button" onClick={() => setHistoryModalOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                Đóng
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => changePredictionHistoryStatus("")}
+                className={!predictionHistoryStatus ? "rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-black text-[#03131b]" : "rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-white/10"}
+              >
+                Tất cả
+              </button>
+              {predictionStatuses.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => changePredictionHistoryStatus(status)}
+                  className={predictionHistoryStatus === status ? "rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-black text-[#03131b]" : "rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-white/10"}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+              {loadingPredictionHistory ? (
+                <div className="p-8 text-center text-slate-400">Đang tải lịch sử cược...</div>
+              ) : predictionHistoryError ? (
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{predictionHistoryError}</div>
+              ) : predictionHistory.length ? (
+                <div className="space-y-3">
+                  {predictionHistory.map((prediction, index) => (
+                    <div key={getPredictionId(prediction) || index} className="rounded-2xl border border-white/10 bg-[#0b1427] p-4 text-sm text-slate-300">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-base font-black text-white">{getRaceName(prediction)}</p>
+                          <p className="mt-1 text-slate-400">Ngựa: <span className="font-semibold text-white">{getHorseName(prediction)}</span></p>
+                          <p className="mt-1 text-slate-400">Loại cược: <span className="font-semibold text-amber-300">{prediction.predictionType || "-"}</span></p>
+                        </div>
+                        <span className="w-fit rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-200">{prediction.status || "-"}</span>
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Điểm cược</p><p className="mt-1 font-black text-amber-300">{prediction.stake ?? "-"}</p></div>
+                        <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Odds</p><p className="mt-1 font-black text-cyan-300">{prediction.oddsSnapshot ?? prediction.oddSnapshot ?? prediction.odd ?? "-"}</p></div>
+                        <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Thời gian</p><p className="mt-1 font-black text-white">{formatDateTime(prediction.createdAt || prediction.updatedAt)}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400">Chưa có lịch sử cược cho trạng thái này.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const userDetailFields = [
+  { label: "Username", key: "username" },
+  { label: "Email", key: "email" },
+  { label: "Họ và tên", key: "fullName" },
+  { label: "Vai trò", key: "role" },
+  { label: "Trạng thái", key: "status" },
+  { label: "Xác thực", key: "isVerified", format: (value) => (value ? "Đã xác thực" : "Chưa xác thực") },
+  { label: "Hạng thành viên", key: "membershipLevel" },
+  { label: "Điểm", key: "points", format: formatPoints },
+  { label: "Chuỗi điểm danh", key: "checkInStreak", format: (value) => `${value || 0} ngày` },
+  { label: "Tổng điểm danh", key: "totalCheckIns" },
+  { label: "Lần đăng nhập cuối", key: "lastLoginAt", format: formatDateTime },
+  { label: "Ngày tạo", key: "createdAt", format: formatDateTime },
+];
 
 export default EndUserHome;
