@@ -1,0 +1,393 @@
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Clock, Crown, Medal, MapPin, Trophy } from "lucide-react";
+import api from "../../config/axios";
+
+const statusStyles = {
+  Open: "bg-[#203A70] text-[#8DB7FF]",
+  Locked: "bg-[#4B2C6F] text-[#D9A520]",
+  Finished: "bg-[#1F4B2C] text-[#7DE8B4]",
+  Cancelled: "bg-[#4B2C2C] text-[#FF9C8A]",
+};
+
+const getRegistrationId = (registration) => registration?._id || registration?.registrationId;
+
+const winnerRankStyles = {
+  1: {
+    label: "Quán quân",
+    Icon: Crown,
+    cardClassName: "border-[#FFD166]/50 bg-gradient-to-br from-[#3A2A08] via-[#16130B] to-[#0A0D17] shadow-[0_20px_60px_rgba(255,209,102,0.16)]",
+    iconClassName: "bg-[#FFD166] text-[#251703] shadow-[0_0_30px_rgba(255,209,102,0.45)]",
+    badgeClassName: "bg-[#FFD166] text-[#251703]",
+  },
+  2: {
+    label: "Á quân",
+    Icon: Trophy,
+    cardClassName: "border-[#C7D2FE]/45 bg-gradient-to-br from-[#252A44] via-[#121827] to-[#0A0D17] shadow-[0_20px_60px_rgba(199,210,254,0.12)]",
+    iconClassName: "bg-[#C7D2FE] text-[#182038] shadow-[0_0_26px_rgba(199,210,254,0.35)]",
+    badgeClassName: "bg-[#C7D2FE] text-[#182038]",
+  },
+  3: {
+    label: "Hạng ba",
+    Icon: Medal,
+    cardClassName: "border-[#F4A261]/45 bg-gradient-to-br from-[#3B2116] via-[#17110F] to-[#0A0D17] shadow-[0_20px_60px_rgba(244,162,97,0.12)]",
+    iconClassName: "bg-[#F4A261] text-[#2B1208] shadow-[0_0_26px_rgba(244,162,97,0.32)]",
+    badgeClassName: "bg-[#F4A261] text-[#2B1208]",
+  },
+};
+
+const getWinnerRankStyle = (rank) => winnerRankStyles[Number(rank)];
+
+const formatDate = (dateString) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  return date.toLocaleString("vi-VN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const RefereeRaceDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [race, setRace] = useState(null);
+  const [resultRanks, setResultRanks] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [submittingResults, setSubmittingResults] = useState(false);
+  const [confirmResultsOpen, setConfirmResultsOpen] = useState(false);
+  const [pendingResults, setPendingResults] = useState([]);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  const fetchRace = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get(`/api/referee/races/${id}`);
+      if (response.data?.status === "Success") {
+        const nextRace = response.data.data || null;
+        setRace(nextRace);
+        setResultRanks(
+          (nextRace?.registrations || []).reduce((acc, registration) => {
+            const registrationId = getRegistrationId(registration);
+            if (registrationId) acc[registrationId] = registration.rank || "";
+            return acc;
+          }, {})
+        );
+      } else {
+        setError(response.data?.message || "Không thể tải chi tiết race.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi gọi API.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const handleRankChange = (registrationId, value) => {
+    setResultRanks((current) => ({ ...current, [registrationId]: value }));
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const buildResultsPayload = () => {
+    const registrations = race?.registrations || [];
+    const results = registrations.map((registration) => ({
+      registrationId: getRegistrationId(registration),
+      rank: Number(resultRanks[getRegistrationId(registration)]),
+    }));
+
+    if (!registrations.length) {
+      setError("Race chưa có đăng ký để chấm thứ hạng.");
+      return null;
+    }
+
+    if (results.some((item) => !item.registrationId || !Number.isInteger(item.rank) || item.rank < 1)) {
+      setError("Vui lòng nhập thứ hạng là số nguyên lớn hơn 0 cho tất cả đăng ký.");
+      return null;
+    }
+
+    const uniqueRanks = new Set(results.map((item) => item.rank));
+    if (uniqueRanks.size !== results.length) {
+      setError("Thứ hạng không được trùng nhau giữa các đăng ký.");
+      return null;
+    }
+
+    return results;
+  };
+
+  const openResultsConfirm = () => {
+    const results = buildResultsPayload();
+    if (!results) return;
+
+    setPendingResults(results);
+    setConfirmResultsOpen(true);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const closeResultsConfirm = () => {
+    if (submittingResults) return;
+    setConfirmResultsOpen(false);
+  };
+
+  const submitRaceResults = async () => {
+    const results = pendingResults.length ? pendingResults : buildResultsPayload();
+    if (!results) return;
+
+    setSubmittingResults(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await api.post(`/api/referee/races/${id}/results`, { results });
+      if (response.data?.status === "Success") {
+        setSuccessMessage(response.data?.message || "Đã chốt kết quả race thành công.");
+        setConfirmResultsOpen(false);
+        setPendingResults([]);
+        await fetchRace();
+      } else {
+        setError(response.data?.message || "Không thể chốt kết quả race.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi chốt kết quả race.");
+    } finally {
+      setSubmittingResults(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRace();
+  }, [fetchRace]);
+
+  return (
+    <div className="space-y-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300 hover:bg-white/10 transition"
+      >
+        <ArrowLeft size={18} /> Quay lại
+      </button>
+
+      {loading ? (
+        <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-10 text-center text-gray-400">Đang tải chi tiết cuộc đua...</div>
+      ) : error && !race ? (
+        <div className="rounded-[32px] border border-red-500/20 bg-[#2B1111]/70 p-6 text-red-200">{error}</div>
+      ) : !race ? (
+        <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-10 text-center text-gray-400">Race không tồn tại.</div>
+      ) : (
+        <div className="space-y-8">
+          {error && (
+            <div className="rounded-[32px] border border-red-500/20 bg-[#2B1111]/70 p-6 text-red-200">{error}</div>
+          )}
+
+          {successMessage && (
+            <div className="rounded-[32px] border border-emerald-500/20 bg-emerald-500/10 p-6 text-emerald-200">{successMessage}</div>
+          )}
+
+          <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-start">
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-500">Chi tiết cuộc đua</p>
+                <h1 className="text-3xl font-black text-white">{race.name}</h1>
+                <div className="flex flex-wrap gap-3 text-sm text-gray-300">
+                  <span className="inline-flex items-center gap-2"><MapPin size={16} /> {race.location}</span>
+                  <span className="inline-flex items-center gap-2"><Clock size={16} /> {formatDate(race.raceDate)}</span>
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[race.status] || "bg-white/5 text-gray-200"}`}>{race.status}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-200 sm:grid-cols-3">
+                <div className="rounded-3xl bg-[#0F1322] p-4">
+                  <p className="text-xs font-semibold text-gray-500">Cự ly</p>
+                  <p className="mt-2 text-xl font-black text-white">{race.distanceM || "-"}m</p>
+                </div>
+                <div className="rounded-3xl bg-[#0F1322] p-4">
+                  <p className="text-xs font-semibold text-gray-500">Giải thưởng</p>
+                  <p className="mt-2 text-xl font-black text-white">{race.prizeMoney ? `₫ ${race.prizeMoney}` : "0"}</p>
+                </div>
+                <div className="rounded-3xl bg-[#0F1322] p-4">
+                  <p className="text-xs font-semibold text-gray-500">Số đăng ký</p>
+                  <p className="mt-2 text-xl font-black text-white">{race.registrations?.length || 0}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {race.status === "Locked" && (
+            <div className="rounded-[32px] border border-[#D9A520]/20 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-bold text-[#D9A520]">Chấm thứ hạng</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Chốt kết quả cuộc đua</h2>
+                  <p className="mt-2 max-w-3xl text-sm text-gray-400">
+                    Nhập thứ hạng cho từng đăng ký rồi chốt kết quả. API sẽ chia thưởng, trả hireFee và chuyển race sang Finished.
+                  </p>
+                </div>
+                <button
+                  onClick={openResultsConfirm}
+                  disabled={submittingResults || !race.registrations?.length}
+                  className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submittingResults ? "Đang chốt..." : "Chốt kết quả"}
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                {race.registrations?.length ? (
+                  race.registrations.map((registration) => {
+                    const registrationId = getRegistrationId(registration);
+                    const rankStyle = getWinnerRankStyle(resultRanks[registrationId]);
+                    const WinnerIcon = rankStyle?.Icon;
+                    return (
+                      <div key={registrationId} className={`rounded-[28px] border p-5 transition-all ${rankStyle?.cardClassName || "border-white/10 bg-[#0A0D17]"}`}>
+                        <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                          <div className="flex gap-4">
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${rankStyle?.iconClassName || "bg-white/5 text-gray-400"}`}>
+                              {WinnerIcon ? <WinnerIcon size={24} /> : <Trophy size={22} />}
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-white">{registration.horse?.name || registration.horse?.registrationNumber || "-"}</p>
+                                {rankStyle && <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${rankStyle.badgeClassName}`}>{rankStyle.label}</span>}
+                              </div>
+                              <p className="mt-1 text-sm text-gray-400">Jockey: {registration.jockey?.fullName || "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Owner: {registration.owner?.stableName || registration.owner?.fullName || "-"}</p>
+                            </div>
+                          </div>
+                          <label className="block min-w-28 text-sm text-gray-300">
+                            Thứ hạng
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={resultRanks[registrationId] || ""}
+                              onChange={(event) => handleRankChange(registrationId, event.target.value)}
+                              className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                              placeholder="1"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-8 text-center text-gray-400 lg:col-span-2">Không có đăng ký nào để chấm thứ hạng.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Danh sách đăng ký</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{race.registrations?.length || 0} lượt đăng ký</h2>
+              </div>
+              <div className="rounded-3xl bg-[#0F1322] px-4 py-3 text-sm text-gray-300">{race.prizeDistribution?.length || 0} bậc phân bổ</div>
+            </div>
+
+            <div className="space-y-4">
+              {race.registrations?.length ? (
+                race.registrations.map((registration) => (
+                  <div key={registration._id} className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-6">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500">Ngựa</p>
+                        <p className="text-lg font-semibold text-white">{registration.horse?.name || "-"}</p>
+                        <p className="text-sm text-gray-400">{registration.horse?.registrationNumber || "-"}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500">Jockey</p>
+                        <p className="text-lg font-semibold text-white">{registration.jockey?.fullName || "-"}</p>
+                        <p className="text-sm text-gray-400">{registration.jockey?.licenseNumber || "-"}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500">Owner</p>
+                        <p className="text-lg font-semibold text-white">{registration.owner?.fullName || "-"}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-3 items-center text-sm text-gray-200">
+                      <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Trạng thái jockey: {registration.jockeyResponse?.status || "-"}</span>
+                      <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Phê duyệt: {registration.approvalStatus || "-"}</span>
+                      <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Payout: {registration.payoutDone ? "Đã trả" : "Chưa"}</span>
+                      <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Bonus: {registration.bonusPaid ? "Đã trả" : "Chưa"}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-8 text-center text-gray-400">Không có đăng ký nào trong cuộc đua này.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmResultsOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className="text-xs font-bold text-[#D9A520]">Xác nhận kết quả</p>
+              <h3 className="mt-2 text-2xl font-black text-white">Chốt kết quả race?</h3>
+              <p className="mt-2 text-sm text-gray-400">
+                Thao tác này sẽ chia thưởng, trả hireFee và chuyển race sang Finished. Vui lòng kiểm tra lại thứ hạng trước khi xác nhận.
+              </p>
+            </div>
+
+            <div className="mt-5 max-h-80 space-y-3 overflow-y-auto rounded-[28px] border border-white/10 bg-[#111827] p-4">
+              {pendingResults
+                .slice()
+                .sort((left, right) => left.rank - right.rank)
+                .map((result) => {
+                  const registration = race?.registrations?.find((item) => getRegistrationId(item) === result.registrationId);
+                  const rankStyle = getWinnerRankStyle(result.rank);
+                  const WinnerIcon = rankStyle?.Icon;
+                  return (
+                    <div key={result.registrationId} className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-sm ${rankStyle?.cardClassName || "border-white/10 bg-[#0A0D17]"}`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${rankStyle?.iconClassName || "bg-white/5 text-gray-400"}`}>
+                          {WinnerIcon ? <WinnerIcon size={24} /> : <Trophy size={22} />}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-white">Hạng {result.rank}</p>
+                            {rankStyle && <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${rankStyle.badgeClassName}`}>{rankStyle.label}</span>}
+                          </div>
+                          <p className="mt-1 text-gray-400">Ngựa: {registration?.horse?.name || registration?.horse?.registrationNumber || "-"}</p>
+                          <p className="mt-1 text-xs text-gray-500">Jockey: {registration?.jockey?.fullName || "-"}</p>
+                          <p className="mt-1 text-xs text-gray-500">Owner: {registration?.owner?.stableName || registration?.owner?.fullName || "-"}</p>
+                        </div>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${rankStyle?.badgeClassName || "bg-[#D9A520]/15 text-[#F8E7A1]"}`}>#{result.rank}</span>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={closeResultsConfirm}
+                disabled={submittingResults}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={submitRaceResults}
+                disabled={submittingResults}
+                className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black text-black hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submittingResults ? "Đang chốt..." : "Xác nhận chốt kết quả"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RefereeRaceDetail;
