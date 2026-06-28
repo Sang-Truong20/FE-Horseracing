@@ -48,6 +48,9 @@ const Login = () => {
           navigate("/owner");
         } else if (normalizedRole === "referee") {
           navigate("/referee");
+        } else if (normalizedRole === "enduser") {
+          navigate("/end-user");
+
         } else {
           alert("Tài khoản của bạn không có quyền truy cập hệ thống");
         }

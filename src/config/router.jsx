@@ -30,6 +30,8 @@ import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/Referee/RefereeRaceDetail";
 import PaymentResult from "../pages/PaymentResult";
+import EndUserHome from "../pages/EndUser/EndUserHome";
+
 
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
@@ -56,6 +58,18 @@ export const router = createBrowserRouter([
     element: <PaymentResult />,
   },
   {
+
+    path: "/end-user",
+    element: <ProtectedRoute allowRole="EndUser" />,
+    children: [
+      {
+        index: true,
+        element: <EndUserHome />,
+      },
+    ],
+  },
+  {
+
     path: "/owner",
     element: <ProtectedRoute allowRole="OwnerHorse" />,
     children: [
