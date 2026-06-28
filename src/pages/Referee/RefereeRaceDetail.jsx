@@ -54,6 +54,8 @@ const formatDate = (dateString) => {
   });
 };
 
+const formatMoney = (value) => Number(value || 0).toLocaleString("vi-VN");
+
 const RefereeRaceDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -65,6 +67,10 @@ const RefereeRaceDetail = () => {
   const [pendingResults, setPendingResults] = useState([]);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState(null);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState(null);
 
   const fetchRace = useCallback(async () => {
     setLoading(true);
@@ -166,6 +172,25 @@ const RefereeRaceDetail = () => {
     }
   };
 
+  const openLeaderboard = async () => {
+    setLeaderboardOpen(true);
+    setLoadingLeaderboard(true);
+    setLeaderboardError(null);
+    setLeaderboardData(null);
+    try {
+      const response = await api.get(`/api/races/${id}/leaderboard`);
+      if (response.data?.status === "Success") {
+        setLeaderboardData(response.data.data || null);
+      } else {
+        setLeaderboardError(response.data?.message || "Không thể tải bảng xếp hạng race.");
+      }
+    } catch (err) {
+      setLeaderboardError(err.response?.data?.message || "Lỗi khi tải bảng xếp hạng race.");
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <button
@@ -212,6 +237,13 @@ const RefereeRaceDetail = () => {
                   <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Số đăng ký</p>
                   <p className="mt-2 text-xl font-black text-white">{race.registrations?.length || 0}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={openLeaderboard}
+                  className="col-span-2 rounded-3xl bg-[#D9A520] p-4 text-left font-black text-black transition hover:bg-[#f2cb46] sm:col-span-3"
+                >
+                  Xem bảng xếp hạng
+                </button>
               </div>
             </div>
           </div>
@@ -322,6 +354,89 @@ const RefereeRaceDetail = () => {
                 <div className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-8 text-center text-gray-400">Không có đăng ký nào trong cuộc đua này.</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {leaderboardOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#D9A520]">Bảng xếp hạng</p>
+                <h3 className="mt-2 text-2xl font-black text-white">{leaderboardData?.race?.name || race?.name || "Chi tiết race"}</h3>
+                {leaderboardData?.race && (
+                  <p className="mt-2 text-sm text-gray-400">
+                    {leaderboardData.race.location || "-"} - {formatDate(leaderboardData.race.raceDate)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLeaderboardOpen(false)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10"
+              >
+                Đóng
+              </button>
+            </div>
+
+            {loadingLeaderboard ? (
+              <div className="mt-6 rounded-[28px] border border-white/10 bg-[#111827] p-8 text-center text-gray-400">Đang tải bảng xếp hạng...</div>
+            ) : leaderboardError ? (
+              <div className="mt-6 rounded-[28px] border border-red-500/20 bg-[#2B1111]/70 p-6 text-red-200">{leaderboardError}</div>
+            ) : leaderboardData ? (
+              <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Trạng thái</p><p className="mt-1 font-black text-emerald-300">{leaderboardData.race?.status || "-"}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Số ngựa</p><p className="mt-1 font-black text-[#D9A520]">{leaderboardData.participantCount ?? leaderboardData.leaderboard?.length ?? 0}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Cự ly</p><p className="mt-1 font-black text-cyan-300">{leaderboardData.race?.distanceM ? `${leaderboardData.race.distanceM}m` : "-"}</p></div>
+                  <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Giải thưởng</p><p className="mt-1 font-black text-white">{leaderboardData.race?.prizeMoney ? leaderboardData.race.prizeMoney.toLocaleString("vi-VN") : "0"}</p></div>
+                </div>
+
+                <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
+                  <div className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                    <span>Hạng</span>
+                    <span>Ngựa</span>
+                    <span>Jockey</span>
+                    <span>Owner</span>
+                    <span>Tiền</span>
+                    <span>Odds</span>
+                  </div>
+                  {leaderboardData.leaderboard?.length ? (
+                    <div className="divide-y divide-white/10">
+                      {leaderboardData.leaderboard.map((item) => (
+                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-gray-300">
+                          <div className="font-black text-[#D9A520]">#{item.rank || item.position || "-"}</div>
+                          <div>
+                            <p className="font-bold text-white">{item.horse?.name || "-"}</p>
+                            <p className="mt-1 text-xs text-gray-500">{item.horse?.registrationNumber || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{item.jockey?.fullName || "-"}</p>
+                            <p className="mt-1 text-xs text-gray-500">Rating: {item.jockey?.rating ?? "-"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{item.owner?.stableName || item.owner?.fullName || "-"}</p>
+                            <p className="mt-1 text-xs text-gray-500">{item.approvalStatus || "-"}</p>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            <p>Owner prize: <span className="font-bold text-emerald-300">{formatMoney(item.prizeWon)}</span></p>
+                            <p>Jockey hire: <span className="font-bold text-cyan-300">{formatMoney(item.hireFee)}</span></p>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            <p>T1: {item.oddTop1 ?? 0}</p>
+                            <p>T2: {item.oddTop2 ?? 0}</p>
+                            <p>T3: {item.oddTop3 ?? 0}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-400">Chưa có dữ liệu bảng xếp hạng.</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
