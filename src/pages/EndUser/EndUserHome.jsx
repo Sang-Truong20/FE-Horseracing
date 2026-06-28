@@ -55,6 +55,14 @@ const getBestOdd = (registration) => {
   return `${Math.max(...odds)}x`;
 };
 
+const getRegistrationId = (registration) => registration?._id || registration?.registrationId;
+
+const predictionTypes = [
+  { value: "Top1", label: "Top 1", oddKey: "oddTop1" },
+  { value: "Top2", label: "Top 2", oddKey: "oddTop2" },
+  { value: "Top3", label: "Top 3", oddKey: "oddTop3" },
+];
+
 const getWinRate = (jockey) => {
   if (!jockey.totalRaces) return 0;
   return Math.round((jockey.totalWins / jockey.totalRaces) * 100);
@@ -103,6 +111,9 @@ const EndUserHome = () => {
   const [checkInError, setCheckInError] = useState(null);
   const [checkInSubmitting, setCheckInSubmitting] = useState(false);
   const [checkInModal, setCheckInModal] = useState(null);
+  const [predictionForms, setPredictionForms] = useState({});
+  const [predictionSubmittingId, setPredictionSubmittingId] = useState(null);
+  const [predictionMessage, setPredictionMessage] = useState(null);
 
   useEffect(() => {
     const fetchRaces = async () => {
@@ -264,6 +275,60 @@ const EndUserHome = () => {
     }
   };
 
+  const updatePredictionForm = (registrationId, field, value) => {
+    setPredictionForms((current) => ({
+      ...current,
+      [registrationId]: {
+        predictionType: "Top1",
+        stake: "",
+        ...current[registrationId],
+        [field]: value,
+      },
+    }));
+    setPredictionMessage(null);
+  };
+
+  const submitPrediction = async (race, registration) => {
+    const raceId = race?._id || race?.raceId;
+    const registrationId = getRegistrationId(registration);
+    const form = predictionForms[registrationId] || { predictionType: "Top1", stake: "" };
+    const stake = Number(form.stake);
+
+    if (!raceId || !registrationId) {
+      setPredictionMessage({ type: "error", text: "Không tìm thấy mã trận đấu hoặc mã đăng ký." });
+      return;
+    }
+
+    if (!Number.isInteger(stake) || stake <= 0) {
+      setPredictionMessage({ type: "error", text: "Vui lòng nhập số điểm cược là số nguyên lớn hơn 0." });
+      return;
+    }
+
+    setPredictionSubmittingId(registrationId);
+    setPredictionMessage(null);
+    try {
+      const response = await api.post(`/api/enduser/races/${raceId}/predict`, {
+        registrationId,
+        predictionType: form.predictionType || "Top1",
+        stake,
+      });
+
+      if (response.data?.status === "Success") {
+        setPredictionMessage({ type: "success", text: response.data?.message || "Đặt dự đoán thành công." });
+        setPredictionForms((current) => ({
+          ...current,
+          [registrationId]: { predictionType: form.predictionType || "Top1", stake: "" },
+        }));
+      } else {
+        setPredictionMessage({ type: "error", text: response.data?.message || "Không thể đặt dự đoán." });
+      }
+    } catch (error) {
+      setPredictionMessage({ type: "error", text: error.response?.data?.message || "Lỗi khi đặt dự đoán." });
+    } finally {
+      setPredictionSubmittingId(null);
+    }
+  };
+
   const activeRaceCount = races.filter((race) => race.status === "Open" || race.status === "Locked").length;
 
   return (
@@ -363,7 +428,13 @@ const EndUserHome = () => {
             ) : raceError ? (
               <div className="rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-6 text-rose-200">{raceError}</div>
             ) : races.length ? (
-              races.map((race, raceIndex) => (
+              <>
+              {predictionMessage && (
+                <div className={predictionMessage.type === "success" ? "rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-200" : "rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200"}>
+                  {predictionMessage.text}
+                </div>
+              )}
+              {races.map((race, raceIndex) => (
                 <div key={race._id} className="overflow-hidden rounded-[26px] border border-cyan-400/10 bg-gradient-to-r from-[#132744] to-[#10203a] shadow-[0_20px_60px_rgba(9,21,46,0.45)]">
                   <div className="p-5">
                     <div className="flex flex-wrap items-center gap-3">
@@ -375,16 +446,60 @@ const EndUserHome = () => {
                       <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">{getStatusLabel(race.status)}</span>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
                       {race.registrations?.length ? (
-                        race.registrations.map((registration, index) => (
-                          <div key={registration._id} className="inline-flex items-center gap-2 rounded-xl bg-[#0a1120] px-3 py-2 text-sm text-slate-200 ring-1 ring-white/5">
-                            <span className={`${horseDots[index % horseDots.length]} h-2.5 w-2.5 rounded-full`} />
-                            <span>{registration.horse?.name || "Ngựa chưa đặt tên"}</span>
-                            <span className="text-xs text-slate-500">{registration.jockey?.fullName || "Chưa có jockey"}</span>
-                            <span className="font-bold text-amber-300">{getBestOdd(registration)}</span>
+                        race.registrations.map((registration, index) => {
+                          const registrationId = getRegistrationId(registration);
+                          const predictionForm = predictionForms[registrationId] || { predictionType: "Top1", stake: "" };
+                          const isPredicting = predictionSubmittingId === registrationId;
+                          const canPredict = race.status === "Open";
+
+                          return (
+                          <div key={registrationId} className="rounded-2xl bg-[#0a1120] p-4 text-sm text-slate-200 ring-1 ring-white/5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`${horseDots[index % horseDots.length]} h-2.5 w-2.5 rounded-full`} />
+                              <span className="font-bold text-white">{registration.horse?.name || "Ngựa chưa đặt tên"}</span>
+                              <span className="text-xs text-slate-500">{registration.jockey?.fullName || "Chưa có jockey"}</span>
+                              <span className="font-bold text-amber-300">{getBestOdd(registration)}</span>
+                            </div>
+
+                            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                              <select
+                                value={predictionForm.predictionType}
+                                onChange={(event) => updatePredictionForm(registrationId, "predictionType", event.target.value)}
+                                disabled={!canPredict || isPredicting}
+                                className="rounded-xl border border-white/10 bg-[#101a30] px-3 py-2 text-white outline-none focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {predictionTypes.map((type) => (
+                                  <option key={type.value} value={type.value}>
+                                    {type.label} - {registration[type.oddKey] ? `${registration[type.oddKey]}x` : "chưa có odds"}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={predictionForm.stake}
+                                onChange={(event) => updatePredictionForm(registrationId, "stake", event.target.value)}
+                                disabled={!canPredict || isPredicting}
+                                className="rounded-xl border border-white/10 bg-[#101a30] px-3 py-2 text-white outline-none focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                                placeholder="Điểm cược"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => submitPrediction(race, registration)}
+                                disabled={!canPredict || isPredicting}
+                                className="rounded-xl bg-gradient-to-r from-amber-300 to-orange-400 px-4 py-2 text-xs font-black text-[#1f1303] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {isPredicting ? "Đang đặt..." : "Dự đoán"}
+                              </button>
+                            </div>
+
+                            {!canPredict && <p className="mt-2 text-xs text-slate-500">Chỉ có thể dự đoán khi trận đang mở.</p>}
                           </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <p className="rounded-xl bg-[#0a1120] px-3 py-2 text-sm text-slate-400 ring-1 ring-white/5">Chưa có đăng ký được duyệt.</p>
                       )}
@@ -406,7 +521,8 @@ const EndUserHome = () => {
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
+              </>
             ) : (
               <div className="rounded-[26px] border border-cyan-400/10 bg-[#10203a] p-8 text-center text-slate-400">Hiện chưa có trận đấu nào để theo dõi.</div>
             )}
