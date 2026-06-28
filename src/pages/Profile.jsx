@@ -1,13 +1,34 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, User, Mail, Briefcase, MapPin, Hash, Calendar, Clock4, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, User, Mail, Briefcase, MapPin, Calendar, Clock4, CheckCircle2, XCircle } from "lucide-react";
 import api from "../config/axios";
+import { loginSuccess } from "../redux/features/userSlice";
+
+const getDateInputValue = (dateString) => {
+  if (!dateString) return "";
+  return new Date(dateString).toISOString().slice(0, 10);
+};
+
+const getEditableProfile = (profile) => ({
+  fullName: profile?.fullName || "",
+  phone: profile?.phone || "",
+  avatar: profile?.avatar || "",
+  address: profile?.address || "",
+  dateOfBirth: getDateInputValue(profile?.dateOfBirth),
+});
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
+  const [profileForm, setProfileForm] = useState(getEditableProfile(null));
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState(null);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -17,7 +38,9 @@ const Profile = () => {
       try {
         const response = await api.get("/api/auth/me");
         if (response.data?.status === "Success" && response.data?.data) {
-          setProfile(response.data.data);
+          const nextProfile = response.data.data;
+          setProfile(nextProfile);
+          setProfileForm(getEditableProfile(nextProfile));
         } else {
           setError(response.data?.message || "Không thể tải thông tin người dùng.");
         }
@@ -31,6 +54,46 @@ const Profile = () => {
 
     fetchProfile();
   }, []);
+
+  const handleFormChange = (field, value) => {
+    setProfileForm((current) => ({ ...current, [field]: value }));
+    setUpdateError(null);
+    setUpdateSuccess(null);
+  };
+
+  const submitProfileUpdate = async (event) => {
+    event.preventDefault();
+    setUpdating(true);
+    setUpdateError(null);
+    setUpdateSuccess(null);
+
+    const payload = {
+      fullName: profileForm.fullName.trim(),
+      phone: profileForm.phone.trim(),
+      avatar: profileForm.avatar.trim(),
+      address: profileForm.address.trim(),
+      dateOfBirth: profileForm.dateOfBirth || undefined,
+    };
+
+    try {
+      const response = await api.put("/api/enduser/profile", payload);
+      if (response.data?.status === "Success") {
+        const nextProfile = response.data?.data || { ...profile, ...payload };
+        const token = localStorage.getItem("token")?.replaceAll('"', "") || null;
+        setProfile(nextProfile);
+        setProfileForm(getEditableProfile(nextProfile));
+        dispatch(loginSuccess({ user: nextProfile, token }));
+        setUpdateSuccess(response.data?.message || "Cập nhật hồ sơ thành công.");
+        setUpdateModalOpen(false);
+      } else {
+        setUpdateError(response.data?.message || "Không thể cập nhật hồ sơ.");
+      }
+    } catch (err) {
+      setUpdateError(err.response?.data?.message || "Lỗi khi cập nhật hồ sơ.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -47,6 +110,8 @@ const Profile = () => {
       </div>
     );
   }
+
+  const isEndUser = profile?.role === "EndUser";
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -92,21 +157,36 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl bg-black/40 p-5 grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Công ty / Stable</p>
-                <p className="mt-3 text-white font-bold">{profile?.companyName || profile?.stableName || "-"}</p>
+            {!isEndUser && (
+              <div className="rounded-3xl bg-black/40 p-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Công ty / Stable</p>
+                  <p className="mt-3 text-white font-bold">{profile?.companyName || profile?.stableName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Mã số thuế</p>
+                  <p className="mt-3 text-white font-bold">{profile?.taxCode || "-"}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Mã số thuế</p>
-                <p className="mt-3 text-white font-bold">{profile?.taxCode || "-"}</p>
-              </div>
-            </div>
+            )}
 
             <div className="rounded-3xl bg-black/40 p-5">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Địa chỉ</p>
-              <p className="mt-3 text-white font-bold">{profile?.stableAddress || "-"}</p>
+              <p className="mt-3 text-white font-bold">{profile?.address || profile?.stableAddress || "-"}</p>
             </div>
+
+            {isEndUser && (
+              <div className="rounded-3xl bg-black/40 p-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Số điện thoại</p>
+                  <p className="mt-3 text-white font-bold">{profile?.phone || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Ngày sinh</p>
+                  <p className="mt-3 text-white font-bold">{profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString("vi-VN") : "-"}</p>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-3xl bg-black/40 p-5 grid gap-4 sm:grid-cols-2">
               <div>
@@ -125,6 +205,23 @@ const Profile = () => {
                 <p className="mt-3 text-white font-bold">{profile?.authProvider || "-"}</p>
               </div>
             </div>
+
+            {isEndUser && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileForm(getEditableProfile(profile));
+                  setUpdateError(null);
+                  setUpdateSuccess(null);
+                  setUpdateModalOpen(true);
+                }}
+                className="w-full rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black text-black transition hover:bg-[#f2cb46]"
+              >
+                Cập nhật hồ sơ
+              </button>
+            )}
+
+            {updateSuccess && <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300">{updateSuccess}</div>}
           </div>
         </div>
 
@@ -174,6 +271,104 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {updateModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4 py-8">
+          <form onSubmit={submitProfileUpdate} className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-[40px] border border-white/10 bg-[#0D1117] p-8 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-gray-500">Cập nhật hồ sơ</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Thông tin có thể chỉnh sửa</h3>
+                <p className="mt-2 text-sm text-gray-400">Điểm và hạng thành viên được khóa bởi hệ thống.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !updating && setUpdateModalOpen(false)}
+                disabled={updating}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Đóng
+              </button>
+            </div>
+
+            {updateError && <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{updateError}</div>}
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-semibold text-gray-300">
+                Họ và tên
+                <input
+                  type="text"
+                  value={profileForm.fullName}
+                  onChange={(event) => handleFormChange("fullName", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="Nhập họ và tên"
+                />
+              </label>
+
+              <label className="block text-sm font-semibold text-gray-300">
+                Số điện thoại
+                <input
+                  type="tel"
+                  value={profileForm.phone}
+                  onChange={(event) => handleFormChange("phone", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="Nhập số điện thoại"
+                />
+              </label>
+
+              <label className="block text-sm font-semibold text-gray-300 sm:col-span-2">
+                Avatar URL
+                <input
+                  type="url"
+                  value={profileForm.avatar}
+                  onChange={(event) => handleFormChange("avatar", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="https://..."
+                />
+              </label>
+
+              <label className="block text-sm font-semibold text-gray-300 sm:col-span-2">
+                Địa chỉ
+                <input
+                  type="text"
+                  value={profileForm.address}
+                  onChange={(event) => handleFormChange("address", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="Nhập địa chỉ"
+                />
+              </label>
+
+              <label className="block text-sm font-semibold text-gray-300">
+                Ngày sinh
+                <input
+                  type="date"
+                  value={profileForm.dateOfBirth}
+                  onChange={(event) => handleFormChange("dateOfBirth", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                />
+              </label>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => !updating && setUpdateModalOpen(false)}
+                disabled={updating}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={updating}
+                className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black text-black transition hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updating ? "Đang cập nhật..." : "Lưu cập nhật"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

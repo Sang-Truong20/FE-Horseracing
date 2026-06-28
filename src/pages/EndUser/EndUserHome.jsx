@@ -152,9 +152,6 @@ const EndUserHome = () => {
   const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
   const [currentUserError, setCurrentUserError] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [userDetailModalOpen, setUserDetailModalOpen] = useState(false);
-  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
-  const [userDetailError, setUserDetailError] = useState(null);
 
   useEffect(() => {
     setCurrentUser(user || null);
@@ -460,26 +457,9 @@ const EndUserHome = () => {
     await fetchPredictionHistory(status);
   };
 
-  const openUserDetail = async () => {
+  const openUserDetail = () => {
     setUserMenuOpen(false);
-    setUserDetailModalOpen(true);
-    setLoadingUserDetail(true);
-    setUserDetailError(null);
-    try {
-      const response = await api.get("/api/auth/me");
-      if (response.data?.status === "Success" && response.data?.data) {
-        const nextUser = response.data.data;
-        const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
-        setCurrentUser(nextUser);
-        dispatch(loginSuccess({ user: nextUser, token: currentToken }));
-      } else {
-        setUserDetailError(response.data?.message || "Không thể tải thông tin tài khoản.");
-      }
-    } catch (error) {
-      setUserDetailError(error.response?.data?.message || "Lỗi khi tải thông tin tài khoản.");
-    } finally {
-      setLoadingUserDetail(false);
-    }
+    navigate("/profile");
   };
 
   const handleLogout = () => {
@@ -1023,55 +1003,6 @@ const EndUserHome = () => {
         </div>
       )}
 
-      {userDetailModalOpen && (
-        <div className="fixed inset-0 z-[78] flex items-center justify-center bg-black/75 px-4 py-8">
-          <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-[32px] border border-cyan-300/20 bg-[#08111f] p-6 shadow-2xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-center gap-4">
-                {displayUser.avatar ? (
-                  <img src={displayUser.avatar} alt={displayUser.fullName || displayUser.username || "User"} className="h-16 w-16 rounded-2xl object-cover" />
-                ) : (
-                  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-xl font-black text-[#05111c]">
-                    {getUserInitials(displayUser)}
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-300">Thông tin tài khoản</p>
-                  <h3 className="mt-2 text-2xl font-black text-white">{displayUser.fullName || displayUser.username || "End User"}</h3>
-                  <p className="mt-1 text-sm text-slate-400">Dữ liệu được lấy trực tiếp từ API /api/auth/me.</p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setUserDetailModalOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
-                Đóng
-              </button>
-            </div>
-
-            {loadingUserDetail ? (
-              <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] p-8 text-center text-slate-400">Đang tải thông tin tài khoản...</div>
-            ) : userDetailError ? (
-              <div className="mt-6 rounded-[24px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{userDetailError}</div>
-            ) : (
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {userDetailFields.map((field) => {
-                  const rawValue = displayUser[field.key];
-                  const value = field.format ? field.format(rawValue) : rawValue;
-                  return (
-                    <div key={field.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                      <p className="text-xs uppercase tracking-[0.25em] text-slate-500">{field.label}</p>
-                      <p className="mt-2 break-words text-sm font-bold text-white">{value || "-"}</p>
-                    </div>
-                  );
-                })}
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:col-span-2">
-                  <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Jockey yêu thích</p>
-                  <p className="mt-2 break-words text-sm font-bold text-white">{displayUser.favoriteJockeys?.length ? displayUser.favoriteJockeys.join(", ") : "-"}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {predictionModal && (() => {
         const registration = predictionModal.registration;
         const race = predictionModal.race;
@@ -1190,20 +1121,5 @@ const EndUserHome = () => {
     </div>
   );
 };
-
-const userDetailFields = [
-  { label: "Username", key: "username" },
-  { label: "Email", key: "email" },
-  { label: "Họ và tên", key: "fullName" },
-  { label: "Vai trò", key: "role" },
-  { label: "Trạng thái", key: "status" },
-  { label: "Xác thực", key: "isVerified", format: (value) => (value ? "Đã xác thực" : "Chưa xác thực") },
-  { label: "Hạng thành viên", key: "membershipLevel" },
-  { label: "Điểm", key: "points", format: formatPoints },
-  { label: "Chuỗi điểm danh", key: "checkInStreak", format: (value) => `${value || 0} ngày` },
-  { label: "Tổng điểm danh", key: "totalCheckIns" },
-  { label: "Lần đăng nhập cuối", key: "lastLoginAt", format: formatDateTime },
-  { label: "Ngày tạo", key: "createdAt", format: formatDateTime },
-];
 
 export default EndUserHome;

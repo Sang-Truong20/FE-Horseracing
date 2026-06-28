@@ -69,6 +69,16 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: "/profile",
+    element: <ProtectedRoute allowRole="EndUser" />,
+    children: [
+      {
+        index: true,
+        element: <Profile />,
+      },
+    ],
+  },
+  {
 
     path: "/owner",
     element: <ProtectedRoute allowRole="OwnerHorse" />,
