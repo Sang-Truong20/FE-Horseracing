@@ -1,10 +1,17 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, Crown, Medal, MapPin, Trophy } from "lucide-react";
+
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Clock, MapPin, Calendar, Trophy, Users } from "lucide-react";
+
 import api from "../../config/axios";
 
 const statusStyles = {
   Open: "bg-[#203A70] text-[#8DB7FF]",
+
   Locked: "bg-[#4B2C6F] text-[#D9A520]",
   Finished: "bg-[#1F4B2C] text-[#7DE8B4]",
   Cancelled: "bg-[#4B2C2C] text-[#FF9C8A]",
@@ -37,6 +44,11 @@ const winnerRankStyles = {
 };
 
 const getWinnerRankStyle = (rank) => winnerRankStyles[Number(rank)];
+
+  Closed: "bg-[#4B2C6F] text-[#D9A520]",
+  Pending: "bg-[#3B3F65] text-[#A6B0FF]",
+};
+
 
 const formatDate = (dateString) => {
   if (!dateString) return "-";
@@ -162,6 +174,28 @@ const RefereeRaceDetail = () => {
   useEffect(() => {
     fetchRace();
   }, [fetchRace]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRace = async () => {
+      try {
+        const response = await api.get(`/api/referee/races/${id}`);
+        if (response.data?.status === "Success") {
+          setRace(response.data.data || null);
+        } else {
+          setError(response.data?.message || "Không thể tải chi tiết race.");
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || "Lỗi khi gọi API.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRace();
+  }, [id]);
+
 
   return (
     <div className="space-y-8">
@@ -175,6 +209,7 @@ const RefereeRaceDetail = () => {
       {loading ? (
         <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-10 text-center text-gray-400">Đang tải chi tiết cuộc đua...</div>
       ) : error && !race ? (
+      ) : error ? (
         <div className="rounded-[32px] border border-red-500/20 bg-[#2B1111]/70 p-6 text-red-200">{error}</div>
       ) : !race ? (
         <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-10 text-center text-gray-400">Race không tồn tại.</div>
@@ -192,6 +227,10 @@ const RefereeRaceDetail = () => {
             <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-start">
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-gray-500">Chi tiết cuộc đua</p>
+          <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-start">
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Chi tiết cuộc đua</p>
                 <h1 className="text-3xl font-black text-white">{race.name}</h1>
                 <div className="flex flex-wrap gap-3 text-sm text-gray-300">
                   <span className="inline-flex items-center gap-2"><MapPin size={16} /> {race.location}</span>
@@ -210,6 +249,15 @@ const RefereeRaceDetail = () => {
                 </div>
                 <div className="rounded-3xl bg-[#0F1322] p-4">
                   <p className="text-xs font-semibold text-gray-500">Số đăng ký</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Cự ly</p>
+                  <p className="mt-2 text-xl font-black text-white">{race.distanceM || "-"}m</p>
+                </div>
+                <div className="rounded-3xl bg-[#0F1322] p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Giải thưởng</p>
+                  <p className="mt-2 text-xl font-black text-white">{race.prizeMoney ? `₫ ${race.prizeMoney}` : "0"}</p>
+                </div>
+                <div className="rounded-3xl bg-[#0F1322] p-4">
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Số đăng ký</p>
                   <p className="mt-2 text-xl font-black text-white">{race.registrations?.length || 0}</p>
                 </div>
               </div>
@@ -284,6 +332,11 @@ const RefereeRaceDetail = () => {
             <div className="flex items-center justify-between gap-4 mb-6">
               <div>
                 <p className="text-xs font-semibold text-gray-500">Danh sách đăng ký</p>
+
+          <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Danh sách đăng ký</p>
                 <h2 className="mt-2 text-2xl font-black text-white">{race.registrations?.length || 0} lượt đăng ký</h2>
               </div>
               <div className="rounded-3xl bg-[#0F1322] px-4 py-3 text-sm text-gray-300">{race.prizeDistribution?.length || 0} bậc phân bổ</div>
@@ -296,16 +349,20 @@ const RefereeRaceDetail = () => {
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-gray-500">Ngựa</p>
+                        <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Ngựa</p>
                         <p className="text-lg font-semibold text-white">{registration.horse?.name || "-"}</p>
                         <p className="text-sm text-gray-400">{registration.horse?.registrationNumber || "-"}</p>
                       </div>
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-gray-500">Jockey</p>
+                        <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Jockey</p>
                         <p className="text-lg font-semibold text-white">{registration.jockey?.fullName || "-"}</p>
                         <p className="text-sm text-gray-400">{registration.jockey?.licenseNumber || "-"}</p>
                       </div>
                       <div className="space-y-2">
                         <p className="text-xs font-semibold text-gray-500">Owner</p>
+
+                        <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Owner</p>
                         <p className="text-lg font-semibold text-white">{registration.owner?.fullName || "-"}</p>
                       </div>
                     </div>

@@ -32,6 +32,7 @@ import RefereeRaceDetail from "../pages/Referee/RefereeRaceDetail";
 import PaymentResult from "../pages/PaymentResult";
 import EndUserHome from "../pages/EndUser/EndUserHome";
 
+
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
     element: <PaymentResult />,
   },
   {
+
     path: "/end-user",
     element: <ProtectedRoute allowRole="EndUser" />,
     children: [
@@ -67,6 +69,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
+
     path: "/owner",
     element: <ProtectedRoute allowRole="OwnerHorse" />,
     children: [
