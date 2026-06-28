@@ -38,11 +38,20 @@ const Login = () => {
         // 1. Lưu vào Redux Store
         dispatch(loginSuccess({ user, token }));
 
-        // 2. Chuyển hướng (Dựa trên role OwnerHorse trong ảnh)
-        if (user.role === "OwnerHorse") {
+        // 2. Chuyển hướng dựa trên role
+        const normalizedRole = user.role?.toLowerCase();
+        if (normalizedRole === "admin") {
+          navigate("/admin");
+        } else if (normalizedRole === "jockey") {
+          navigate("/jockey"); 
+        } else if (normalizedRole === "ownerhorse") {
           navigate("/owner");
+        } else if (normalizedRole === "referee") {
+          navigate("/referee");
+        } else if (normalizedRole === "enduser") {
+          navigate("/end-user");
         } else {
-          alert("Tài khoản của bạn không có quyền truy cập Owner Portal");
+          alert("Tài khoản của bạn không có quyền truy cập hệ thống");
         }
       } else {
         alert(response.data.message || "Đăng nhập thất bại!");
@@ -136,6 +145,18 @@ const Login = () => {
             {loading ? "ĐANG..." : "Đăng nhập"}
           </button>
         </form>
+
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <p className="text-xs text-gray-400">
+            Chưa có tài khoản?{" "}
+            <a
+              href="/register"
+              className="text-[#D9A520] font-semibold hover:text-[#EBCB75] transition-colors"
+            >
+              Đăng ký ngay
+            </a>
+          </p>
+        </div>
 
         <p className="mt-6 text-center text-xs text-gray-500">© 2026 Thunder Track</p>
         <div className="relative z-10">

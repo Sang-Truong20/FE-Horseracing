@@ -60,6 +60,15 @@ const ManageJockeys = () => {
     fetchJockeys();
   }, []);
 
+  const getJockeyDisplayName = (currentJockey) => {
+    if (!currentJockey) return null;
+    if (typeof currentJockey === "object") {
+      return currentJockey.name || currentJockey.fullName || currentJockey.hoTen || currentJockey.username || currentJockey._id || currentJockey.id;
+    }
+    const matched = jockeys.find((jockey) => jockey._id === currentJockey || jockey.name === currentJockey);
+    return matched?.name || currentJockey;
+  };
+
   const handleAssignJockey = async (horseId) => {
     if (!selectedJockey[horseId]) {
       alertFail("Vui lòng chọn jockey");
@@ -137,7 +146,7 @@ const ManageJockeys = () => {
                       {horse.currentJockey && (
                         <div className="mt-2 text-xs text-green-400 flex items-center gap-2">
                           <CheckCircle size={14} />
-                          Jockey hiện tại: <span className="font-bold">{horse.currentJockey}</span>
+                          Jockey hiện tại: <span className="font-bold">{getJockeyDisplayName(horse.currentJockey)}</span>
                         </div>
                       )}
                     </div>

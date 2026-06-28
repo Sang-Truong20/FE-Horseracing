@@ -1,7 +1,8 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Login from "../pages/Login";
-// ĐẢM BẢO ĐÃ IMPORT CÁC FILE NÀY
+import Register from "../pages/Register";
+import Profile from "../pages/Profile";
 import OwnerLayout from "../layout/OwnerLayout"; 
 import OwnerDashboard from "../pages/Owner/OwnerDashboard";
 import ManageHorses from "../pages/Owner/ManageHorses";
@@ -12,8 +13,25 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUsers from "../pages/Admin/AdminUsers";
 import AdminOwners from "../pages/Admin/AdminOwners";
 import AdminJockeys from "../pages/Admin/AdminJockeys";
+import AdminRaces from "../pages/Admin/AdminRaces";
+import AdminGifts from "../pages/Admin/AdminGifts";
 
-// Component bảo vệ route
+import AdminReferees from "../pages/Admin/AdminReferees";
+
+import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
+import JockeyLayout from "../layout/JockeyLayout";
+import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
+import JockeyHorses from "../pages/Jockey/JockeyHorses";
+import JockeyRequests from "../pages/Jockey/JockeyRequests";
+import JockeySchedule from "../pages/Jockey/JockeySchedule";
+import JockeyIncome from "../pages/Jockey/JockeyIncome";
+import JockeyWallet from "../pages/Jockey/JockeyWallet";
+import RefereeLayout from "../layout/RefereeLayout";
+import RefereeDashboard from "../pages/Referee/RefereeDashboard";
+import RefereeRaceDetail from "../pages/Referee/RefereeRaceDetail";
+import PaymentResult from "../pages/PaymentResult";
+import EndUserHome from "../pages/EndUser/EndUserHome";
+
 const ProtectedRoute = ({ allowRole }) => {
   const { user, isAuthenticated } = useSelector((state) => state.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -24,11 +42,29 @@ const ProtectedRoute = ({ allowRole }) => {
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Navigate to="/owner" replace />,
+    element: <Navigate to="/login" replace />,
   },
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/payment-result",
+    element: <PaymentResult />,
+  },
+  {
+    path: "/end-user",
+    element: <ProtectedRoute allowRole="EndUser" />,
+    children: [
+      {
+        index: true,
+        element: <EndUserHome />,
+      },
+    ],
   },
   {
     path: "/owner",
@@ -49,6 +85,10 @@ export const router = createBrowserRouter([
       {
         path: "wallet",
         element: <OwnerLayout><ManageWallet /></OwnerLayout>,
+      },
+      {
+        path: "profile",
+        element: <OwnerLayout><Profile /></OwnerLayout>,
       },
       {
         path: "horses",
@@ -75,6 +115,78 @@ export const router = createBrowserRouter([
       {
         path: "jockeys",
         element: <AdminJockeys />,
+      },
+      {
+        path: "referees",
+        element: <AdminReferees />,
+      },
+      {
+        path: "races",
+        element: <AdminRaces />,
+      },
+      {
+        path: "gifts",
+        element: <AdminGifts />,
+      },
+      {
+        path: "withdrawals",
+        element: <AdminWithdrawals />,
+      },
+    ],
+  },
+  {
+    path: "/jockey",
+    element: <ProtectedRoute allowRole="Jockey" />,
+    children: [
+      {
+        index: true,
+        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+      },
+      {
+        path: "schedule",
+        element: <JockeyLayout><JockeySchedule /></JockeyLayout>,
+      },
+      {
+        path: "income",
+        element: <JockeyLayout><JockeyIncome /></JockeyLayout>,
+      },
+      {
+        path: "wallet",
+        element: <JockeyLayout><JockeyWallet /></JockeyLayout>,
+      },
+      {
+        path: "requests",
+        element: <JockeyLayout><JockeyRequests /></JockeyLayout>,
+      },
+      {
+        path: "horses",
+        element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
+      }
+    ],
+  },
+  {
+    path: "/referee",
+    element: <ProtectedRoute allowRole="Referee" />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "races",
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "pending",
+        element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "races/:id",
+        element: <RefereeLayout><RefereeRaceDetail /></RefereeLayout>,
       },
     ],
   },
