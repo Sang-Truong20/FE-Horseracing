@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zplay/gpt-5.5",
+  "provider": {
+    "zplay": {
+      "api": "openai",
+      "options": {
+        "apiKey": "sk-f0d2bff65fd308d3361bed75d085fc534d942efa0b7988fc",
+        "baseURL": "https://zplay.io.vn/v1"
+      },
+      "models": {
+        "gpt-5.5": {
+          "id": "gpt-5.5",
+          "tool_call": true
+        },
+        "gpt-5.5-turbo": {
+          "id": "gpt-5.5-turbo",
+          "tool_call": true
+        },
+        "gpt-5.4": {
+          "id": "gpt-5.4",
+          "tool_call": true
+        },
+        "gpt-4o": {
+          "id": "gpt-4o",
+          "tool_call": true
+        }
+      }
+    }
+  },
+  "disabled_providers": ["openai", "anthropic"]
+}

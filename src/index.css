@@ -5,4 +5,8 @@
 body {
   margin: 0;
   background-color: #05070A;
+  font-family: "Segoe UI", Arial, Roboto, "Helvetica Neue", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
