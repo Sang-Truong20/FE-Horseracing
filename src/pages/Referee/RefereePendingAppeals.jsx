@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Clock, FileText, RefreshCw } from "lucide-react";
+import { AlertCircle, Clock, FileText, RefreshCw, XCircle } from "lucide-react";
 
 import api from "../../config/axios";
 
@@ -44,10 +44,18 @@ const getAppealReason = (appeal) => appeal.reason || appeal.content || appeal.de
 
 const getAppealId = (appeal, index) => appeal._id || appeal.appealId || `${appeal.registration?._id || "appeal"}-${index}`;
 
+const getRaceId = (appeal) => appeal.raceId || appeal.race?._id || appeal.race?.id || "";
+const getRegId = (appeal) => appeal.registrationId || appeal.registration?._id || appeal.registration?.id || "";
+const getPenaltyId = (appeal) => appeal.penaltyId || appeal.penalty?._id || appeal.penalty?.id || "";
+
 const RefereePendingAppeals = () => {
   const [appeals, setAppeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelDialog, setCancelDialog] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [submittingCancel, setSubmittingCancel] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const fetchPendingAppeals = async () => {
     setLoading(true);
@@ -70,8 +78,57 @@ const RefereePendingAppeals = () => {
     fetchPendingAppeals();
   }, []);
 
+  const openCancelDialog = (appeal) => {
+    setCancelDialog(appeal);
+    setCancelReason("");
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const closeCancelDialog = () => {
+    if (submittingCancel) return;
+    setCancelDialog(null);
+  };
+
+  const submitCancelPenalty = async () => {
+    if (!cancelDialog || !cancelReason.trim()) {
+      setError("Vui lòng nhập lý do gỡ án phạt.");
+      return;
+    }
+
+    const raceId = getRaceId(cancelDialog);
+    const regId = getRegId(cancelDialog);
+    const penaltyId = getPenaltyId(cancelDialog);
+    if (!raceId || !regId || !penaltyId) {
+      setError("Thiếu thông tin race/registration/penalty để gỡ án phạt.");
+      return;
+    }
+
+    setSubmittingCancel(true);
+    setError(null);
+    try {
+      const response = await api.delete(
+        `/api/referee/races/${raceId}/registrations/${regId}/penalty/${penaltyId}`,
+        { data: { cancelReason: cancelReason.trim() } }
+      );
+      if (response.data?.status === "Success") {
+        setSuccessMessage(response.data?.message || "Đã gỡ án phạt thành công.");
+        setCancelDialog(null);
+        await fetchPendingAppeals();
+      } else {
+        setError(response.data?.message || "Không thể gỡ án phạt.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi gỡ án phạt.");
+    } finally {
+      setSubmittingCancel(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {successMessage && <div className="rounded-[32px] border border-emerald-500/20 bg-emerald-500/10 p-6 text-emerald-200">{successMessage}</div>}
+
       <div className="rounded-[32px] border border-white/10 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -157,6 +214,16 @@ const RefereePendingAppeals = () => {
                   <p className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-gray-500"><AlertCircle size={14} /> Nội dung</p>
                   <p className="text-sm leading-6 text-gray-300">{getAppealReason(appeal)}</p>
                 </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-white/10 pt-5">
+                  <button
+                    type="button"
+                    onClick={() => openCancelDialog(appeal)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-200 transition hover:bg-red-500/20"
+                  >
+                    <XCircle size={16} /> Gỡ án phạt
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -164,6 +231,56 @@ const RefereePendingAppeals = () => {
           <div className="rounded-[28px] border border-white/10 bg-[#111827] p-10 text-center text-gray-400">Không có kháng cáo Pending.</div>
         )}
       </div>
+
+      {cancelDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-red-400">Gỡ án phạt</p>
+                <h3 className="mt-2 text-2xl font-black text-white">{getRaceName(cancelDialog)}</h3>
+                <p className="mt-2 text-sm text-gray-400">
+                  Xác nhận gỡ án phạt cho <span className="font-semibold text-white">{getJockeyName(cancelDialog)}</span>.
+                  Hành động này ghi nhận lịch sử audit.
+                </p>
+              </div>
+              <button onClick={closeCancelDialog} disabled={submittingCancel} className="text-gray-400 hover:text-white">
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm text-gray-300">
+                Lý do gỡ án phạt
+                <input
+                  type="text"
+                  value={cancelReason}
+                  onChange={(e) => { setCancelReason(e.target.value); setError(null); }}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-red-400"
+                  placeholder="Ghi nhầm jockey / Jockey kháng án thành công"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={closeCancelDialog}
+                disabled={submittingCancel}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={submitCancelPenalty}
+                disabled={submittingCancel || !cancelReason.trim()}
+                className="rounded-2xl bg-red-500 px-5 py-3 text-sm font-black text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submittingCancel ? "Đang xử lý..." : "Xác nhận gỡ án phạt"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

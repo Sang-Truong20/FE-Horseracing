@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Wallet, History, AlertCircle, CreditCard } from "lucide-react";
+import { Wallet, History, AlertCircle, Send } from "lucide-react";
 import api from "../../config/axios";
 
 const JockeyWallet = () => {
@@ -7,10 +7,14 @@ const JockeyWallet = () => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [depositAmount, setDepositAmount] = useState("");
-  const [depositing, setDepositing] = useState(false);
-  const [depositError, setDepositError] = useState(null);
-  const [depositMessage, setDepositMessage] = useState(null);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawBankName, setWithdrawBankName] = useState("");
+  const [withdrawAccountNumber, setWithdrawAccountNumber] = useState("");
+  const [withdrawAccountName, setWithdrawAccountName] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawInfo, setWithdrawInfo] = useState(null);
+  const [withdrawError, setWithdrawError] = useState(null);
+  const [withdrawMessage, setWithdrawMessage] = useState(null);
 
   const getTransactionMeta = (type, amount) => {
     const normalizedType = type || "Adjustment";
@@ -64,37 +68,54 @@ const JockeyWallet = () => {
     fetchWallet();
   }, []);
 
-  const handleDeposit = async () => {
-    setDepositError(null);
-    setDepositMessage(null);
+  const handleWithdraw = async () => {
+    setWithdrawError(null);
+    setWithdrawMessage(null);
 
-    if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      setDepositError("Vui lòng nhập số tiền nạp hợp lệ");
+    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+      setWithdrawError("Vui lòng nhập số tiền hợp lệ");
       return;
     }
 
-    setDepositing(true);
+    if (!withdrawBankName || withdrawBankName.trim() === "") {
+      setWithdrawError("Vui lòng nhập tên ngân hàng");
+      return;
+    }
+
+    if (!withdrawAccountNumber || withdrawAccountNumber.trim() === "") {
+      setWithdrawError("Vui lòng nhập số tài khoản");
+      return;
+    }
+
+    if (!withdrawAccountName || withdrawAccountName.trim() === "") {
+      setWithdrawError("Vui lòng nhập tên chủ tài khoản");
+      return;
+    }
+
+    setWithdrawing(true);
+    setWithdrawInfo(null);
     try {
-      const response = await api.post("/api/wallet/deposit", {
-        amount: parseFloat(depositAmount),
+      const response = await api.post("/api/wallet/withdraw", {
+        amount: parseFloat(withdrawAmount),
+        bankName: withdrawBankName,
+        accountNumber: withdrawAccountNumber,
+        accountName: withdrawAccountName,
       });
-      const data = response.data?.data ?? response.data ?? {};
-      const paymentUrl = data.paymentUrl;
-      const txId = data.txId;
-
-      if (!paymentUrl) {
-        setDepositError(response.data?.message || "Không tạo được liên kết thanh toán VNPay");
-        return;
+      if (response.data?.status === "Success") {
+        setWithdrawInfo(response.data.data || null);
+        setWithdrawMessage("Yêu cầu rút tiền đã được gửi. Vui lòng chờ admin duyệt.");
+        setWithdrawAmount("");
+        setWithdrawBankName("");
+        setWithdrawAccountNumber("");
+        setWithdrawAccountName("");
+        fetchWallet();
+      } else {
+        setWithdrawError(response.data?.message || "Rút tiền thất bại");
       }
-
-      // Lưu txId để trang /payment-result có thể poll trạng thái sau khi VNPay redirect về.
-      if (txId) localStorage.setItem("pendingDepositTxId", txId);
-      setDepositMessage("Đang chuyển hướng tới cổng thanh toán VNPay...");
-      window.location.href = paymentUrl;
     } catch (err) {
-      setDepositError(err.response?.data?.message || "Lỗi khi tạo lệnh nạp");
+      setWithdrawError(err.response?.data?.message || "Lỗi khi rút tiền");
     } finally {
-      setDepositing(false);
+      setWithdrawing(false);
     }
   };
 
@@ -128,50 +149,79 @@ const JockeyWallet = () => {
       <div className="bg-[#0D1117] rounded-[40px] border border-white/5 overflow-hidden shadow-2xl p-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-[#D9A520]/20 p-3 rounded-2xl">
-            <CreditCard size={24} className="text-[#D9A520]" />
+            <Send size={24} className="text-[#D9A520]" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Nạp Tiền</h3>
-            <p className="text-sm text-gray-400">Nạp tiền qua cổng thanh toán VNPay.</p>
+            <h3 className="text-lg font-bold text-white">Rút Tiền</h3>
+            <p className="text-sm text-gray-400">Gửi yêu cầu rút tiền về tài khoản ngân hàng.</p>
           </div>
         </div>
 
-        {depositError && (
+        {withdrawError && (
           <div className="mb-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-            {depositError}
+            {withdrawError}
           </div>
         )}
-        {depositMessage && (
+        {withdrawMessage && (
           <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-            {depositMessage}
+            {withdrawMessage}
           </div>
         )}
 
         <div className="space-y-4">
           <div>
             <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
-              Số Tiền Nạp
+              Số Tiền Rút
             </label>
             <div className="flex items-center gap-2">
               <span className="text-gray-600">₫</span>
               <input
                 type="number"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
                 placeholder="Nhập số tiền..."
-                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#D9A520]/50 transition-all"
+                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-2">Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.</p>
+            <p className="text-xs text-gray-500 mt-2">Số dư hiện có: ₫ {wallet?.balance?.toLocaleString("vi-VN") || "0"}</p>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Tên Ngân Hàng</label>
+            <input type="text" value={withdrawBankName} onChange={(e) => setWithdrawBankName(e.target.value)} placeholder="Vd: Vietcombank, Techcombank..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all" />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Số Tài Khoản</label>
+            <input type="text" value={withdrawAccountNumber} onChange={(e) => setWithdrawAccountNumber(e.target.value)} placeholder="Nhập số tài khoản..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all" />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Tên Chủ Tài Khoản</label>
+            <input type="text" value={withdrawAccountName} onChange={(e) => setWithdrawAccountName(e.target.value)} placeholder="Nhập tên chủ tài khoản..." className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-all" />
           </div>
 
           <button
-            onClick={handleDeposit}
-            disabled={depositing || parseFloat(depositAmount) <= 0}
-            className="w-full bg-[#D9A520] text-black font-bold py-3 rounded-xl hover:bg-[#B8860B] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
+            onClick={handleWithdraw}
+            disabled={withdrawing || !wallet || parseFloat(withdrawAmount) <= 0 || !withdrawBankName.trim() || !withdrawAccountNumber.trim() || !withdrawAccountName.trim()}
+            className="w-full bg-emerald-500 text-white font-bold py-3 rounded-xl hover:bg-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-tighter"
           >
-            {depositing ? "Đang chuyển hướng..." : "Nạp Tiền Qua VNPay"}
+            {withdrawing ? "Đang xử lý..." : "Rút Tiền"}
           </button>
+
+          {withdrawInfo && (
+            <div className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+              <div className="flex justify-between gap-4 text-sm">
+                <span className="text-gray-400">Số tiền</span>
+                <span className="font-bold text-white">₫ {withdrawInfo.amount?.toLocaleString("vi-VN") || "0"}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1"><p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Ngân hàng</p><p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">{withdrawInfo.bankName || "-"}</p></div>
+                <div className="space-y-1"><p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Số tài khoản</p><p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">{withdrawInfo.accountNumber || "-"}</p></div>
+              </div>
+              <div className="space-y-1"><p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tên chủ tài khoản</p><p className="rounded-xl bg-black/40 px-4 py-3 text-sm font-bold text-white break-all">{withdrawInfo.accountName || "-"}</p></div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -236,7 +286,7 @@ const JockeyWallet = () => {
           <div>
             <h4 className="font-bold text-white text-sm mb-1">Lưu Ý Bảo Mật</h4>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Không chia sẻ thông tin ví của bạn với bất kỳ ai.
+              Không chia sẻ thông tin ví của bạn với bất kỳ ai. Tất cả giao dịch rút tiền sẽ được xử lý trong 1-3 ngày làm việc.
             </p>
           </div>
         </div>
