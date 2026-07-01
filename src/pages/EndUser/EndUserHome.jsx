@@ -17,6 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import api from "../../config/axios";
+import NotificationMenu from "../../components/NotificationMenu";
 import { loginSuccess, logout } from "../../redux/features/userSlice";
 
 const navItems = [
@@ -544,9 +545,11 @@ const EndUserHome = () => {
               <Search size={16} className="text-slate-500" />
               <span className="text-sm text-slate-500">Tìm kiếm...</span>
             </div>
-            <button type="button" className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-300">
-              <Bell size={16} />
-            </button>
+            <NotificationMenu
+              buttonClassName="relative grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+              unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
+              panelClassName="right-0"
+            />
             <div className="flex items-center gap-2 rounded-xl bg-amber-400/10 px-3 py-2 text-amber-300 ring-1 ring-amber-300/20">
               <Star size={16} />
               <span className="text-sm font-bold">{loadingCurrentUser ? "..." : formatPoints(displayPoints)} điểm</span>

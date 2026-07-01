@@ -25,6 +25,7 @@ const buildNotificationRoute = (notification, role, currentPathname) => {
   const isJockey = role === "Jockey";
   const isReferee = role === "Referee";
   const isAdmin = role === "Admin";
+  const isEndUser = role === "EndUser";
 
   if (type === "WalletDebit" || type === "WalletCredit" || type === "WalletTransaction") {
     if (isAdmin) return "/admin/withdrawals";
@@ -44,6 +45,7 @@ const buildNotificationRoute = (notification, role, currentPathname) => {
     if (isReferee) return "/referee";
     if (isOwner) return "/owner/races";
     if (isAdmin) return "/admin/races";
+    if (isEndUser) return "/end-user";
     return currentPathname;
   }
 
@@ -56,6 +58,7 @@ const buildNotificationRoute = (notification, role, currentPathname) => {
 
   if (type === "ProfileUpdate" || type === "AccountUpdate") {
     if (isAdmin) return "/admin/users";
+    if (isEndUser) return "/profile";
     return "/profile";
   }
 
@@ -70,6 +73,7 @@ const buildNotificationRoute = (notification, role, currentPathname) => {
     if (isOwner) return "/owner/races";
     if (isReferee) return "/referee";
     if (isAdmin) return "/admin/races";
+    if (isEndUser) return "/end-user";
   }
 
   return currentPathname;
