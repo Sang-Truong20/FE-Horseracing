@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { AlertTriangle, Clock, RefreshCw, Send, X } from "lucide-react";
 
 import api from "../../config/axios";
 
@@ -33,6 +33,21 @@ const getStatus = (item) => item.status || item.appealStatus || "Pending";
 const getCreatedAt = (item) => item.createdAt || item.appealedAt || item.updatedAt;
 const getId = (item, index) => item._id || item.penaltyId || item.appealId || `${index}`;
 
+const getRaceId = (item) => item.raceId || item.race?._id || item.race?.id || "";
+const getRegId = (item) => item.registrationId || item.registration?._id || item.registration?.id || "";
+const getPenaltyId = (item) => item.penaltyId || item._id || item.appealId || "";
+const getAppealStatus = (item) => item.appealStatus || "";
+const hasPendingAppeal = (item) => {
+  const status = getAppealStatus(item);
+  if (!status) return false;
+  return String(status).toLowerCase() === "pending";
+};
+const canAppeal = (item) => {
+  if (!getRaceId(item) || !getRegId(item) || !getPenaltyId(item)) return false;
+  if (hasPendingAppeal(item)) return false;
+  return true;
+};
+
 const statusMeta = (status) => {
   const normalized = String(status || "Pending").toLowerCase();
   if (normalized.includes("approved") || normalized.includes("accepted")) {
@@ -51,6 +66,10 @@ const JockeyPenalties = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [appealDialog, setAppealDialog] = useState(null);
+  const [appealReason, setAppealReason] = useState("");
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const fetchPenalties = async () => {
     setLoading(true);
@@ -73,8 +92,58 @@ const JockeyPenalties = () => {
     fetchPenalties();
   }, []);
 
+  const openAppealDialog = (item) => {
+    setAppealDialog(item);
+    setAppealReason("");
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const closeAppealDialog = () => {
+    if (submittingAppeal) return;
+    setAppealDialog(null);
+  };
+
+  const submitAppeal = async () => {
+    if (!appealDialog || !appealReason.trim()) {
+      setError("Vui lòng nhập lý do kháng án.");
+      return;
+    }
+
+    const raceId = getRaceId(appealDialog);
+    const regId = getRegId(appealDialog);
+    const penaltyId = getPenaltyId(appealDialog);
+    if (!raceId || !regId || !penaltyId) {
+      setError("Thiếu thông tin race/registration/penalty để gửi kháng án.");
+      return;
+    }
+
+    setSubmittingAppeal(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await api.post(
+        `/api/jockey/races/${raceId}/registrations/${regId}/penalty/${penaltyId}/appeal`,
+        { reason: appealReason.trim() }
+      );
+      if (response.data?.status === "Success") {
+        setSuccessMessage(response.data?.message || "Gửi kháng án thành công.");
+        setAppealDialog(null);
+        await fetchPenalties();
+      } else {
+        setError(response.data?.message || "Không thể gửi kháng án.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi gửi kháng án.");
+    } finally {
+      setSubmittingAppeal(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {successMessage && <div className="rounded-[32px] border border-emerald-500/20 bg-emerald-500/10 p-6 text-emerald-200">{successMessage}</div>}
+
       <div className="rounded-[32px] border border-white/10 bg-[#1C152B] p-8 shadow-[0_30px_80px_rgba(28,21,43,0.35)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -161,6 +230,22 @@ const JockeyPenalties = () => {
                       <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-gray-500">Lý do</p>
                       <p className="text-sm leading-6 text-gray-300">{getPenaltyReason(item)}</p>
                     </div>
+
+                    <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-white/10 pt-5">
+                      {canAppeal(item) ? (
+                        <button
+                          type="button"
+                          onClick={() => openAppealDialog(item)}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-[#EBCB75] px-4 py-2 text-sm font-black text-black transition hover:bg-[#f4d98f]"
+                        >
+                          <Send size={16} /> Gửi kháng án
+                        </button>
+                      ) : hasPendingAppeal(item) ? (
+                        <span className="inline-flex items-center gap-2 rounded-2xl border border-[#D9A520]/20 bg-[#D9A520]/10 px-4 py-2 text-xs font-bold text-[#F8E7A1]">
+                          Đã gửi kháng án, chờ xử lý
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
@@ -169,6 +254,55 @@ const JockeyPenalties = () => {
           <div className="rounded-[28px] border border-white/10 bg-[#0F0B19] p-10 text-center text-gray-400">Không có án phạt hoặc kháng án nào.</div>
         )}
       </div>
+
+      {appealDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#150F22] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-gray-500">Gửi kháng án</p>
+                <h3 className="mt-2 text-2xl font-black text-white">{getRaceName(appealDialog)}</h3>
+                <p className="mt-2 text-sm text-gray-400">
+                  Gửi kháng cáo xin gỡ án phạt <span className="font-semibold text-[#EBCB75]">+{getPenaltyTime(appealDialog)}s</span>. Referee sẽ nhận thông báo.
+                </p>
+              </div>
+              <button onClick={closeAppealDialog} disabled={submittingAppeal} className="text-gray-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm text-gray-300">
+                Lý do kháng án
+                <textarea
+                  value={appealReason}
+                  onChange={(e) => { setAppealReason(e.target.value); setError(null); }}
+                  rows={4}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#0F0B19] px-4 py-3 text-sm text-white outline-none transition focus:border-[#EBCB75] resize-none"
+                  placeholder="Tôi không lấn vạch, video chứng minh điều đó"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={closeAppealDialog}
+                disabled={submittingAppeal}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={submitAppeal}
+                disabled={submittingAppeal || !appealReason.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#EBCB75] px-5 py-3 text-sm font-black text-black transition hover:bg-[#f4d98f] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submittingAppeal ? "Đang gửi..." : "Gửi kháng án"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
