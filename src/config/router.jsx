@@ -26,6 +26,7 @@ import JockeyRequests from "../pages/Jockey/JockeyRequests";
 import JockeySchedule from "../pages/Jockey/JockeySchedule";
 import JockeyIncome from "../pages/Jockey/JockeyIncome";
 import JockeyWallet from "../pages/Jockey/JockeyWallet";
+import JockeyPenalties from "../pages/Jockey/JockeyPenalties";
 import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
 import RefereePendingAppeals from "../pages/Referee/RefereePendingAppeals";
@@ -175,6 +176,10 @@ export const router = createBrowserRouter([
       {
         path: "horses",
         element: <JockeyLayout><JockeyHorses /></JockeyLayout>,
+      },
+      {
+        path: "penalties",
+        element: <JockeyLayout><JockeyPenalties /></JockeyLayout>,
       }
     ],
   },

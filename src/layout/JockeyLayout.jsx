@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { LayoutDashboard, Calendar, Bell, Wallet, Settings, LogOut, Award, Smartphone } from 'lucide-react'; // Hoặc lucide-react
+import { LayoutDashboard, Calendar, Bell, Wallet, Settings, LogOut, Award, Smartphone, AlertTriangle } from 'lucide-react'; // Hoặc lucide-react
 import { logout } from '../redux/features/userSlice';
 import NotificationMenu from '../components/NotificationMenu';
 
@@ -20,6 +20,7 @@ const JockeyLayout = ({ children }) => {
     { icon: <Calendar size={18} />, label: 'Lịch đua', path: '/jockey/schedule' },
     { icon: <Bell size={18} />, label: 'Yêu cầu đua', path: '/jockey/requests', badge: 3 },
     { icon: <Award size={18} />, label: 'Ngựa được gắn', path: '/jockey/horses' },
+    { icon: <AlertTriangle size={18} />, label: 'Án phạt & kháng án', path: '/jockey/penalties' },
     { icon: <Wallet size={18} />, label: 'Thu nhập & Thưởng', path: '/jockey/income' },
   ];
 
