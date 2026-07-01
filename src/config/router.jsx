@@ -28,6 +28,7 @@ import JockeyIncome from "../pages/Jockey/JockeyIncome";
 import JockeyWallet from "../pages/Jockey/JockeyWallet";
 import RefereeLayout from "../layout/RefereeLayout";
 import RefereeDashboard from "../pages/Referee/RefereeDashboard";
+import RefereePendingAppeals from "../pages/Referee/RefereePendingAppeals";
 import RefereeRaceDetail from "../pages/Referee/RefereeRaceDetail";
 import PaymentResult from "../pages/PaymentResult";
 import EndUserHome from "../pages/EndUser/EndUserHome";
@@ -196,6 +197,10 @@ export const router = createBrowserRouter([
       {
         path: "pending",
         element: <RefereeLayout><RefereeDashboard /></RefereeLayout>,
+      },
+      {
+        path: "appeals",
+        element: <RefereeLayout><RefereePendingAppeals /></RefereeLayout>,
       },
       {
         path: "races/:id",

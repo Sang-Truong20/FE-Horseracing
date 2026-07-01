@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { LogOut, Search, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
+import { FileText, LogOut, Search, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
 import { logout } from "../redux/features/userSlice";
 import NotificationMenu from "../components/NotificationMenu";
 
@@ -22,6 +22,7 @@ const RefereeLayout = ({ children }) => {
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, path: "/referee/dashboard" },
     { label: "Race được giao", icon: <Flag size={18} />, path: "/referee/races" },
     { label: "Danh sách chờ duyệt", icon: <Users size={18} />, path: "/referee/pending" },
+    { label: "Kháng cáo pending", icon: <FileText size={18} />, path: "/referee/appeals" },
   ];
 
   return (
