@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, Crown, MapPin, Medal, Trophy } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, Crown, MapPin, Medal, Trophy } from "lucide-react";
 
 import api from "../../config/axios";
 
@@ -77,6 +77,11 @@ const RefereeRaceDetail = () => {
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState(null);
+  const [penaltyModalOpen, setPenaltyModalOpen] = useState(false);
+  const [penaltyTargetReg, setPenaltyTargetReg] = useState(null);
+  const [penaltyReason, setPenaltyReason] = useState("");
+  const [penaltyTimeSec, setPenaltyTimeSec] = useState("");
+  const [submittingPenalty, setSubmittingPenalty] = useState(false);
 
   const fetchRace = useCallback(async () => {
     setLoading(true);
@@ -266,6 +271,51 @@ const RefereeRaceDetail = () => {
     }
   };
 
+  const openPenaltyModal = (registration) => {
+    setPenaltyTargetReg(registration);
+    setPenaltyReason("");
+    setPenaltyTimeSec("");
+    setError(null);
+    setSuccessMessage(null);
+    setPenaltyModalOpen(true);
+  };
+
+  const closePenaltyModal = () => {
+    if (submittingPenalty) return;
+    setPenaltyModalOpen(false);
+    setPenaltyTargetReg(null);
+  };
+
+  const submitPenalty = async () => {
+    if (!penaltyTargetReg || !penaltyReason.trim() || !penaltyTimeSec || Number(penaltyTimeSec) <= 0) {
+      setError("Vui lòng nhập lý do và số giây phạt lớn hơn 0.");
+      return;
+    }
+
+    const regId = getRegistrationId(penaltyTargetReg);
+    setSubmittingPenalty(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await api.post(`/api/referee/races/${id}/registrations/${regId}/penalty`, {
+        reason: penaltyReason.trim(),
+        timePenaltySec: Number(penaltyTimeSec),
+      });
+      if (response.data?.status === "Success") {
+        setSuccessMessage(response.data?.message || `Đã phạt ${penaltyTargetReg.horse?.name || "ngựa"} thành công.`);
+        setPenaltyModalOpen(false);
+        setPenaltyTargetReg(null);
+        await fetchRace();
+      } else {
+        setError(response.data?.message || "Không thể thêm penalty.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Lỗi khi thêm penalty.");
+    } finally {
+      setSubmittingPenalty(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <button
@@ -435,7 +485,7 @@ const RefereeRaceDetail = () => {
             <div className="space-y-4">
               {race.registrations?.length ? (
                 race.registrations.map((registration) => (
-                  <div key={getRegistrationId(registration)} className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-6">
+                  <div key={getRegistrationId(registration)} className="rounded-[28px] border border-white/10 bg-[#0A0D17] p-6 relative">
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="space-y-2">
                         <p className="text-xs uppercase tracking-[0.25em] text-gray-500">Ngựa</p>
@@ -458,6 +508,15 @@ const RefereeRaceDetail = () => {
                       <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Phê duyệt: {registration.approvalStatus || "-"}</span>
                       <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Payout: {registration.payoutDone ? "Đã trả" : "Chưa"}</span>
                       <span className="inline-flex items-center gap-2 rounded-3xl bg-[#141B2F] px-3 py-2">Bonus: {registration.bonusPaid ? "Đã trả" : "Chưa"}</span>
+                      {(race.status === "Locked" || race.status === "Finished") && (
+                        <button
+                          type="button"
+                          onClick={() => openPenaltyModal(registration)}
+                          className="inline-flex items-center gap-1.5 rounded-3xl bg-[#8B2D2D] px-3 py-2 text-xs font-bold text-[#FF9C8A] transition hover:bg-[#A33737]"
+                        >
+                          <AlertTriangle size={14} /> Phạt
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -548,6 +607,65 @@ const RefereeRaceDetail = () => {
                 </div>
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {penaltyModalOpen && penaltyTargetReg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className="text-xs font-bold text-[#D9A520]">Phạt Jockey</p>
+              <h3 className="mt-2 text-2xl font-black text-white">{penaltyTargetReg.horse?.name || penaltyTargetReg.horse?.registrationNumber || "-"}</h3>
+              <p className="mt-2 text-sm text-gray-400">
+                Jockey: {penaltyTargetReg.jockey?.fullName || "-"}
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                Owner: {penaltyTargetReg.owner?.stableName || penaltyTargetReg.owner?.fullName || "-"}
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block text-sm text-gray-300">
+                Lý do phạt
+                <input
+                  type="text"
+                  value={penaltyReason}
+                  onChange={(e) => { setPenaltyReason(e.target.value); setError(null); }}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="Jockey sai vạch xuất phát"
+                />
+              </label>
+              <label className="block text-sm text-gray-300">
+                Số giây phạt
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={penaltyTimeSec}
+                  onChange={(e) => { setPenaltyTimeSec(e.target.value); setError(null); }}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                  placeholder="5"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                onClick={closePenaltyModal}
+                disabled={submittingPenalty}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={submitPenalty}
+                disabled={submittingPenalty}
+                className="rounded-2xl bg-[#8B2D2D] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#A33737] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submittingPenalty ? "Đang xử lý..." : "Xác nhận phạt"}
+              </button>
+            </div>
           </div>
         </div>
       )}
