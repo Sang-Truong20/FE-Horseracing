@@ -38,6 +38,9 @@ const AdminRaces = () => {
   const [referees, setReferees] = useState([]);
   const [horseLabels, setHorseLabels] = useState({});
   const [userLabels, setUserLabels] = useState({});
+  const [oddsModalVisible, setOddsModalVisible] = useState(false);
+  const [oddsInputs, setOddsInputs] = useState({});
+  const [oddsSubmitting, setOddsSubmitting] = useState(false);
   const [createForm] = Form.useForm();
 
   const getEntityLabel = (entity) => {
@@ -101,6 +104,78 @@ const AdminRaces = () => {
     } catch (err) {
       console.error("Fetch referees error:", err);
       setReferees([]);
+    }
+  };
+
+  const openOddsModal = (race) => {
+    if (!race?.registrations?.length) {
+      message.warning("Race chưa có đăng ký để thêm tỷ lệ cược.");
+      return;
+    }
+    const initialOdds = {};
+    race.registrations.forEach((registration) => {
+      const id = registration._id || registration.registrationId;
+      if (!id) return;
+      initialOdds[id] = {
+        oddTop1: registration.oddTop1 ?? "",
+        oddTop2: registration.oddTop2 ?? "",
+        oddTop3: registration.oddTop3 ?? "",
+      };
+    });
+    setOddsInputs(initialOdds);
+    setSelectedRace(race);
+    setOddsModalVisible(true);
+  };
+
+  const closeOddsModal = () => {
+    if (oddsSubmitting) return;
+    setOddsModalVisible(false);
+  };
+
+  const handleOddsChange = (registrationId, field, value) => {
+    setOddsInputs((current) => ({
+      ...current,
+      [registrationId]: {
+        ...(current[registrationId] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const submitOdds = async () => {
+    if (!selectedRace) return;
+    const odds = Object.entries(oddsInputs).map(([registrationId, values]) => ({
+      registrationId,
+      oddTop1: Number(values.oddTop1) || 0,
+      oddTop2: Number(values.oddTop2) || 0,
+      oddTop3: Number(values.oddTop3) || 0,
+    }));
+
+    setOddsSubmitting(true);
+    try {
+      const response = await api.patch(`/api/admin/races/${selectedRace._id}/odds`, { odds });
+      if (response.data?.status === "Success") {
+        message.success(response.data?.message || "Đã cập nhật tỷ lệ cược thành công.");
+        setOddsModalVisible(false);
+        setSelectedRace((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            registrations: prev.registrations.map((registration) => {
+              const id = registration._id || registration.registrationId;
+              const updated = odds.find((item) => item.registrationId === id);
+              return updated ? { ...registration, ...updated } : registration;
+            }),
+          };
+        });
+        fetchRaces();
+      } else {
+        message.error(response.data?.message || "Không thể cập nhật tỷ lệ cược.");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Lỗi khi gửi tỷ lệ cược.");
+    } finally {
+      setOddsSubmitting(false);
     }
   };
 
@@ -347,7 +422,18 @@ const AdminRaces = () => {
               </div>
 
               <div>
-                <h3 className="mb-3 text-lg font-bold">referee</h3>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">referee</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openOddsModal(selectedRace)}
+                    className="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700"
+                  >
+                    Thêm tỷ lệ cược
+                  </button>
+                </div>
                 <div className="rounded-lg border border-gray-200 p-4">
                   <p><span className="text-gray-600">email:</span> {selectedRace.referee?.email || "-"}</p>
                   <p><span className="text-gray-600">fullName:</span> {selectedRace.referee?.fullName || "-"}</p>
@@ -520,6 +606,81 @@ const AdminRaces = () => {
             </div>
           </Form>
         </Modal>
+          <Modal
+            title={`Thêm tỷ lệ cược cho ${selectedRace?.name || "cuộc đua"}`}
+            open={oddsModalVisible}
+            onCancel={closeOddsModal}
+            onOk={submitOdds}
+            confirmLoading={oddsSubmitting}
+            width={760}
+            bodyStyle={{ backgroundColor: "#ffffff", color: "#111827", padding: "20px" }}
+            okText="Lưu tỷ lệ cược"
+            cancelText="Hủy"
+          >
+            <div className="space-y-4">
+              {selectedRace?.registrations?.length ? (
+                selectedRace.registrations.map((registration) => {
+                  const registrationId = registration._id || registration.registrationId;
+                  const values = oddsInputs[registrationId] || { oddTop1: "", oddTop2: "", oddTop3: "" };
+                  return (
+                    <div key={registrationId} className="rounded-lg border border-gray-200 p-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <p className="text-sm text-gray-600">Ngựa</p>
+                          <p className="font-semibold">{getEntityLabel(registration.horse)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Jockey</p>
+                          <p className="font-semibold">{getEntityLabel(registration.jockey)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Owner</p>
+                          <p className="font-semibold">{getEntityLabel(registration.owner)}</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <label className="block text-sm text-gray-600">
+                            oddTop1
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={values.oddTop1}
+                              onChange={(e) => handleOddsChange(registrationId, "oddTop1", e.target.value)}
+                              placeholder="4.5"
+                            />
+                          </label>
+                          <label className="block text-sm text-gray-600">
+                            oddTop2
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={values.oddTop2}
+                              onChange={(e) => handleOddsChange(registrationId, "oddTop2", e.target.value)}
+                              placeholder="2.2"
+                            />
+                          </label>
+                          <label className="block text-sm text-gray-600">
+                            oddTop3
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={values.oddTop3}
+                              onChange={(e) => handleOddsChange(registrationId, "oddTop3", e.target.value)}
+                              placeholder="1.4"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-gray-500">Không có đăng ký để thiết lập tỷ lệ cược.</p>
+              )}
+            </div>
+          </Modal>
       </div>
     </AdminLayout>
   );

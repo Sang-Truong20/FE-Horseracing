@@ -144,6 +144,7 @@ const EndUserHome = () => {
   const [predictionSubmittingId, setPredictionSubmittingId] = useState(null);
   const [predictionMessage, setPredictionMessage] = useState(null);
   const [predictionModal, setPredictionModal] = useState(null);
+  const [predictionSuccessModal, setPredictionSuccessModal] = useState(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [predictionHistory, setPredictionHistory] = useState([]);
   const [predictionHistoryStatus, setPredictionHistoryStatus] = useState("");
@@ -417,12 +418,16 @@ const EndUserHome = () => {
       });
 
       if (response.data?.status === "Success") {
-        setPredictionMessage({ type: "success", text: response.data?.message || "Đặt dự đoán thành công." });
+        setPredictionSuccessModal({
+          title: "Đặt cược thành công",
+          message: response.data?.message || "Đặt dự đoán thành công.",
+        });
         setPredictionModal(null);
         setPredictionForms((current) => ({
           ...current,
           [registrationId]: { predictionType: form.predictionType || "Top1", stake: "" },
         }));
+        setPredictionMessage(null);
       } else {
         setPredictionMessage({ type: "error", text: response.data?.message || "Không thể đặt dự đoán." });
       }
@@ -657,8 +662,8 @@ const EndUserHome = () => {
               <div className="rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-6 text-rose-200">{raceError}</div>
             ) : races.length ? (
               <>
-              {predictionMessage && (
-                <div className={predictionMessage.type === "success" ? "rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-200" : "rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200"}>
+              {predictionMessage?.type === "error" && (
+                <div className="rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">
                   {predictionMessage.text}
                 </div>
               )}
@@ -1159,6 +1164,23 @@ const EndUserHome = () => {
         </div>
         );
       })()}
+
+      {predictionSuccessModal && (
+        <div className="fixed inset-0 z-[81] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-emerald-400/20 bg-[#071511] p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Thành công</p>
+            <h3 className="mt-2 text-2xl font-black text-white">{predictionSuccessModal.title}</h3>
+            <p className="mt-4 text-sm leading-relaxed text-slate-300">{predictionSuccessModal.message}</p>
+            <button
+              type="button"
+              onClick={() => setPredictionSuccessModal(null)}
+              className="mt-6 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {historyModalOpen && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 px-4 py-8">

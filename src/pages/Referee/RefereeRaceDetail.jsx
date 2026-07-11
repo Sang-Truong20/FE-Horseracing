@@ -71,6 +71,7 @@ const RefereeRaceDetail = () => {
   const [submittingResults, setSubmittingResults] = useState(false);
   const [confirmResultsOpen, setConfirmResultsOpen] = useState(false);
   const [pendingResults, setPendingResults] = useState([]);
+  const [resultFeedbackModal, setResultFeedbackModal] = useState(null);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -94,7 +95,7 @@ const RefereeRaceDetail = () => {
         setResultRanks(
           (nextRace?.registrations || []).reduce((acc, registration) => {
             const registrationId = getRegistrationId(registration);
-            if (registrationId) acc[registrationId] = registration.rank || "";
+            if (registrationId) acc[registrationId] = registration.finalRank ?? registration.rank ?? "";
             return acc;
           }, {})
         );
@@ -238,15 +239,27 @@ const RefereeRaceDetail = () => {
         ? await api.patch(`/api/referee/races/${id}/results`, { results })
         : await api.post(`/api/referee/races/${id}/results`, { results });
       if (response.data?.status === "Success") {
-        setSuccessMessage(response.data?.message || (isEditingFinalizedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."));
+        setResultFeedbackModal({
+          type: "success",
+          title: "Chốt kết quả thành công",
+          message: response.data?.message || (isEditingFinalizedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."),
+        });
         setConfirmResultsOpen(false);
         setPendingResults([]);
         await fetchRace();
       } else {
-        setError(response.data?.message || (isEditingFinalizedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."));
+        setResultFeedbackModal({
+          type: "error",
+          title: "Lỗi chốt kết quả",
+          message: response.data?.message || (isEditingFinalizedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."),
+        });
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Lỗi khi gửi kết quả race.");
+      setResultFeedbackModal({
+        type: "error",
+        title: "Lỗi khi gửi kết quả",
+        message: err.response?.data?.message || "Lỗi khi gửi kết quả race.",
+      });
     } finally {
       setSubmittingResults(false);
     }
@@ -412,6 +425,8 @@ const RefereeRaceDetail = () => {
                               </div>
                               <p className="mt-1 text-sm text-gray-400">Jockey: {registration.jockey?.fullName || "-"}</p>
                               <p className="mt-1 text-sm text-gray-400">Owner: {registration.owner?.stableName || registration.owner?.fullName || "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Hạng: {registration.finalRank ?? "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Finish time: {registration.finishTimeSec ?? "-"} giây</p>
                             </div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
@@ -421,10 +436,10 @@ const RefereeRaceDetail = () => {
                                 type="number"
                                 min="1"
                                 step="1"
-                              value={resultRanks[registrationId] ?? ""}
+                                value={resultRanks[registrationId] ?? ""}
                                 onChange={(event) => handleRankChange(registrationId, event.target.value)}
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="1"
+                                placeholder="hãy nhập thứ hạng, thời gian"
                               />
                             </label>
                             <label className="block text-sm text-gray-300">
@@ -436,7 +451,7 @@ const RefereeRaceDetail = () => {
                                 value={resultFinishTimes[registrationId] ?? ""}
                                 onChange={(event) => handleFinishTimeChange(registrationId, event.target.value)}
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="0.01"
+                                placeholder="hãy nhập thứ hạng, thời gian"
                               />
                             </label>
                             <label className="block text-sm text-gray-300 sm:col-span-2">
@@ -564,18 +579,19 @@ const RefereeRaceDetail = () => {
                 </div>
 
                 <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
-                  <div className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                  <div className="grid grid-cols-[70px_1.2fr_1fr_1fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
                     <span>Hạng</span>
                     <span>Ngựa</span>
                     <span>Jockey</span>
                     <span>Owner</span>
                     <span>Tiền</span>
+                    <span>Finish</span>
                     <span>Odds</span>
                   </div>
                   {leaderboardData.leaderboard?.length ? (
                     <div className="divide-y divide-white/10">
                       {leaderboardData.leaderboard.map((item) => (
-                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-gray-300">
+                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.2fr_1fr_1fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-gray-300">
                           <div className="font-black text-[#D9A520]">#{item.rank || item.position || "-"}</div>
                           <div>
                             <p className="font-bold text-white">{item.horse?.name || "-"}</p>
@@ -590,8 +606,7 @@ const RefereeRaceDetail = () => {
                             <p className="mt-1 text-xs text-gray-500">{item.approvalStatus || "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
-                            <p>Owner prize: <span className="font-bold text-emerald-300">{formatMoney(item.prizeWon)}</span></p>
-                            <p>Jockey hire: <span className="font-bold text-cyan-300">{formatMoney(item.hireFee)}</span></p>
+                            <p>{item.finishTimeSec != null ? `${item.finishTimeSec}s` : "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
                             <p>T1: {item.oddTop1 ?? 0}</p>
@@ -607,6 +622,27 @@ const RefereeRaceDetail = () => {
                 </div>
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {resultFeedbackModal && (
+        <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-[0.35em] ${resultFeedbackModal.type === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                {resultFeedbackModal.type === "success" ? "Thành công" : "Lỗi"}
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-white">{resultFeedbackModal.title}</h3>
+              <p className="mt-4 text-sm text-gray-300">{resultFeedbackModal.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setResultFeedbackModal(null)}
+              className="mt-6 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
@@ -731,6 +767,27 @@ const RefereeRaceDetail = () => {
                 {submittingResults ? "Đang gửi..." : race?.status === "Finished" ? "Xác nhận cập nhật" : "Xác nhận chốt kết quả"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {resultFeedbackModal && (
+        <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-[0.35em] ${resultFeedbackModal.type === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                {resultFeedbackModal.type === "success" ? "Thành công" : "Lỗi"}
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-white">{resultFeedbackModal.title}</h3>
+              <p className="mt-4 text-sm text-gray-300">{resultFeedbackModal.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setResultFeedbackModal(null)}
+              className="mt-6 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
