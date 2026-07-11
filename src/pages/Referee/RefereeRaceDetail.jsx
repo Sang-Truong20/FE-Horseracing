@@ -71,6 +71,7 @@ const RefereeRaceDetail = () => {
   const [submittingResults, setSubmittingResults] = useState(false);
   const [confirmResultsOpen, setConfirmResultsOpen] = useState(false);
   const [pendingResults, setPendingResults] = useState([]);
+  const [resultFeedbackModal, setResultFeedbackModal] = useState(null);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -238,15 +239,27 @@ const RefereeRaceDetail = () => {
         ? await api.patch(`/api/referee/races/${id}/results`, { results })
         : await api.post(`/api/referee/races/${id}/results`, { results });
       if (response.data?.status === "Success") {
-        setSuccessMessage(response.data?.message || (isEditingFinalizedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."));
+        setResultFeedbackModal({
+          type: "success",
+          title: "Chốt kết quả thành công",
+          message: response.data?.message || (isEditingFinalizedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."),
+        });
         setConfirmResultsOpen(false);
         setPendingResults([]);
         await fetchRace();
       } else {
-        setError(response.data?.message || (isEditingFinalizedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."));
+        setResultFeedbackModal({
+          type: "error",
+          title: "Lỗi chốt kết quả",
+          message: response.data?.message || (isEditingFinalizedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."),
+        });
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Lỗi khi gửi kết quả race.");
+      setResultFeedbackModal({
+        type: "error",
+        title: "Lỗi khi gửi kết quả",
+        message: err.response?.data?.message || "Lỗi khi gửi kết quả race.",
+      });
     } finally {
       setSubmittingResults(false);
     }
@@ -613,6 +626,27 @@ const RefereeRaceDetail = () => {
         </div>
       )}
 
+      {resultFeedbackModal && (
+        <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-[0.35em] ${resultFeedbackModal.type === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                {resultFeedbackModal.type === "success" ? "Thành công" : "Lỗi"}
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-white">{resultFeedbackModal.title}</h3>
+              <p className="mt-4 text-sm text-gray-300">{resultFeedbackModal.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setResultFeedbackModal(null)}
+              className="mt-6 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {penaltyModalOpen && penaltyTargetReg && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
           <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
@@ -733,6 +767,27 @@ const RefereeRaceDetail = () => {
                 {submittingResults ? "Đang gửi..." : race?.status === "Finished" ? "Xác nhận cập nhật" : "Xác nhận chốt kết quả"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {resultFeedbackModal && (
+        <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-[0.35em] ${resultFeedbackModal.type === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                {resultFeedbackModal.type === "success" ? "Thành công" : "Lỗi"}
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-white">{resultFeedbackModal.title}</h3>
+              <p className="mt-4 text-sm text-gray-300">{resultFeedbackModal.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setResultFeedbackModal(null)}
+              className="mt-6 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-black text-white hover:bg-white/15"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
