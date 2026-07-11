@@ -94,7 +94,7 @@ const RefereeRaceDetail = () => {
         setResultRanks(
           (nextRace?.registrations || []).reduce((acc, registration) => {
             const registrationId = getRegistrationId(registration);
-            if (registrationId) acc[registrationId] = registration.rank || "";
+            if (registrationId) acc[registrationId] = registration.finalRank ?? registration.rank ?? "";
             return acc;
           }, {})
         );
@@ -412,6 +412,8 @@ const RefereeRaceDetail = () => {
                               </div>
                               <p className="mt-1 text-sm text-gray-400">Jockey: {registration.jockey?.fullName || "-"}</p>
                               <p className="mt-1 text-sm text-gray-400">Owner: {registration.owner?.stableName || registration.owner?.fullName || "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Hạng: {registration.finalRank ?? "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Finish time: {registration.finishTimeSec ?? "-"} giây</p>
                             </div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
@@ -421,10 +423,10 @@ const RefereeRaceDetail = () => {
                                 type="number"
                                 min="1"
                                 step="1"
-                              value={resultRanks[registrationId] ?? ""}
+                                value={resultRanks[registrationId] ?? ""}
                                 onChange={(event) => handleRankChange(registrationId, event.target.value)}
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="1"
+                                placeholder="hãy nhập thứ hạng, thời gian"
                               />
                             </label>
                             <label className="block text-sm text-gray-300">
@@ -436,7 +438,7 @@ const RefereeRaceDetail = () => {
                                 value={resultFinishTimes[registrationId] ?? ""}
                                 onChange={(event) => handleFinishTimeChange(registrationId, event.target.value)}
                                 className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="0.01"
+                                placeholder="hãy nhập thứ hạng, thời gian"
                               />
                             </label>
                             <label className="block text-sm text-gray-300 sm:col-span-2">
@@ -564,18 +566,19 @@ const RefereeRaceDetail = () => {
                 </div>
 
                 <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
-                  <div className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                  <div className="grid grid-cols-[70px_1.2fr_1fr_1fr_1fr_1fr_90px] gap-3 bg-white/[0.06] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
                     <span>Hạng</span>
                     <span>Ngựa</span>
                     <span>Jockey</span>
                     <span>Owner</span>
                     <span>Tiền</span>
+                    <span>Finish</span>
                     <span>Odds</span>
                   </div>
                   {leaderboardData.leaderboard?.length ? (
                     <div className="divide-y divide-white/10">
                       {leaderboardData.leaderboard.map((item) => (
-                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.3fr_1fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-gray-300">
+                        <div key={item.horse?._id || item.position} className="grid grid-cols-[70px_1.2fr_1fr_1fr_1fr_1fr_90px] gap-3 px-4 py-4 text-sm text-gray-300">
                           <div className="font-black text-[#D9A520]">#{item.rank || item.position || "-"}</div>
                           <div>
                             <p className="font-bold text-white">{item.horse?.name || "-"}</p>
@@ -590,8 +593,7 @@ const RefereeRaceDetail = () => {
                             <p className="mt-1 text-xs text-gray-500">{item.approvalStatus || "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
-                            <p>Owner prize: <span className="font-bold text-emerald-300">{formatMoney(item.prizeWon)}</span></p>
-                            <p>Jockey hire: <span className="font-bold text-cyan-300">{formatMoney(item.hireFee)}</span></p>
+                            <p>{item.finishTimeSec != null ? `${item.finishTimeSec}s` : "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
                             <p>T1: {item.oddTop1 ?? 0}</p>
