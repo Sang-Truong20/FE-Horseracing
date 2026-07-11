@@ -40,7 +40,8 @@ const getOwnerName = (appeal) =>
   appeal.ownerName ||
   "-";
 
-const getAppealReason = (appeal) => appeal.reason || appeal.content || appeal.description || appeal.note || "-";
+const getAppealReason = (appeal) =>
+  appeal.appealReason || appeal.penaltyReason || appeal.reason || appeal.content || appeal.description || appeal.note || "-";
 
 const getAppealId = (appeal, index) => appeal._id || appeal.appealId || `${appeal.registration?._id || "appeal"}-${index}`;
 
@@ -148,7 +149,7 @@ const RefereePendingAppeals = () => {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-3xl bg-[#0F1322] p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Pending</p>
             <p className="mt-2 text-2xl font-black text-[#D9A520]">{appeals.length}</p>
@@ -156,10 +157,6 @@ const RefereePendingAppeals = () => {
           <div className="rounded-3xl bg-[#0F1322] p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Sort</p>
             <p className="mt-2 text-2xl font-black text-white">FIFO</p>
-          </div>
-          <div className="rounded-3xl bg-[#0F1322] p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-gray-500">API</p>
-            <p className="mt-2 text-sm font-bold text-emerald-300">/api/referee/pending-appeals</p>
           </div>
         </div>
       </div>
@@ -190,9 +187,7 @@ const RefereePendingAppeals = () => {
                     <h3 className="text-lg font-black text-white">{getRaceName(appeal)}</h3>
                     <p className="inline-flex items-center gap-2 text-sm text-gray-400"><Clock size={15} /> {formatDate(getRaceDate(appeal))}</p>
                   </div>
-                  <div className="rounded-2xl bg-[#0A0D17] px-4 py-3 text-sm text-gray-300">
-                    Mã kháng cáo: <span className="font-semibold text-white">{appeal._id || appeal.appealId || "-"}</span>
-                  </div>
+                  {/* removed visible appeal id per API requirement; reasons are shown below */}
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
