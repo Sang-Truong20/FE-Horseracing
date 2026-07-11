@@ -202,7 +202,7 @@ const ManageRaces = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead>
+                  <thead>
                 <tr className="bg-black/20 text-[10px] uppercase text-gray-600 border-b border-white/5">
                   <th className="px-6 py-3">Race</th>
                   <th className="px-6 py-3">Ngày</th>
@@ -213,28 +213,40 @@ const ManageRaces = () => {
                   <th className="px-6 py-3">Jockey</th>
                   <th className="px-6 py-3">Hire Fee</th>
                   <th className="px-6 py-3">Bonus %</th>
-                  <th className="px-6 py-3">Payout</th>
+                  <th className="px-6 py-3">My Prize</th>
+                  <th className="px-6 py-3">Bonus Paid</th>
+                  <th className="px-6 py-3">Net Profit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {payoutHistory.length > 0 ? (
-                  payoutHistory.map((item) => (
-                    <tr key={item.raceId} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 font-bold text-white">{item.raceName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(item.raceDate)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.location}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.referee?.fullName || "-"}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-[#D9A520]">{formatCurrency(item.prizeMoney)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.horse?.name || "-"}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockey?.fullName || "-"}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(item.myEntry?.hireFee)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockeyBonusPercent ?? 0}%</td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{item.payout ? formatCurrency(item.payout) : "-"}</td>
-                    </tr>
-                  ))
+                  payoutHistory.map((item) => {
+                    const payoutObj = item.payout && typeof item.payout === 'object' ? item.payout : null;
+                    // If backend returns a numeric payout (legacy), treat it as myPrize
+                    const legacyPrize = !payoutObj && (typeof item.payout === 'number' || (!item.payout && item.myPrize)) ? (item.payout || item.myPrize) : null;
+                    const myPrize = payoutObj?.myPrize ?? legacyPrize ?? null;
+                    const myBonus = payoutObj?.myBonusPaidToJockey ?? payoutObj?.myBonusPaid ?? null;
+                    const myNet = payoutObj?.myNetProfit ?? legacyPrize ?? null;
+                    return (
+                      <tr key={item.raceId} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4 font-bold text-white">{item.raceName}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(item.raceDate)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{item.location}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{item.referee?.fullName || "-"}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-[#D9A520]">{formatCurrency(item.prizeMoney)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.horse?.name || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockey?.fullName || "-"}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(item.myEntry?.hireFee)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{item.myEntry?.jockeyBonusPercent ?? 0}%</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(myPrize)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(myBonus)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-300">{formatCurrency(myNet)}</td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="10" className="px-6 py-6 text-center text-gray-400">Không có lịch sử trả thưởng.</td>
+                    <td colSpan="12" className="px-6 py-6 text-center text-gray-400">Không có lịch sử trả thưởng.</td>
                   </tr>
                 )}
               </tbody>
