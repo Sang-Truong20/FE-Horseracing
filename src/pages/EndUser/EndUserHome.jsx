@@ -24,7 +24,7 @@ const navItems = [
   { label: "Kết Quả", value: "races" },
   { label: "Jockey", value: "jockeys" },
   { label: "Điểm Danh", value: "checkin" },
-  { label: "Đổi Quà", badge: 12 },
+  { label: "Đổi Quà", value: "gifts" },
   { label: "Điểm Thưởng" },
 ];
 
@@ -167,6 +167,17 @@ const EndUserHome = () => {
   const [aiChatInput, setAIChatInput] = useState("");
   const [loadingAIChat, setLoadingAIChat] = useState(false);
   const [aiChatError, setAIChatError] = useState(null);
+  const [gifts, setGifts] = useState([]);
+  const [loadingGifts, setLoadingGifts] = useState(false);
+  const [giftsError, setGiftsError] = useState(null);
+  const [redeemConfirmModal, setRedeemConfirmModal] = useState(null);
+  const [loadingRedeem, setLoadingRedeem] = useState(false);
+  const [redeemSuccessModal, setRedeemSuccessModal] = useState(null);
+  const [redeemError, setRedeemError] = useState(null);
+  const [redemptionHistoryModal, setRedemptionHistoryModal] = useState(false);
+  const [redemptionHistory, setRedemptionHistory] = useState([]);
+  const [loadingRedemptionHistory, setLoadingRedemptionHistory] = useState(false);
+  const [redemptionHistoryError, setRedemptionHistoryError] = useState(null);
 
   useEffect(() => {
     setCurrentUser(user || null);
@@ -285,6 +296,29 @@ const EndUserHome = () => {
 
     fetchCheckInStatus();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "gifts" || gifts.length) return;
+
+    const fetchGifts = async () => {
+      setLoadingGifts(true);
+      setGiftsError(null);
+      try {
+        const response = await api.get("/api/enduser/gifts");
+        if (response.data?.status === "Success") {
+          setGifts(normalizeArray(response.data.data));
+        } else {
+          setGiftsError(response.data?.message || "Không thể tải danh sách quà.");
+        }
+      } catch (error) {
+        setGiftsError(error.response?.data?.message || "Lỗi khi tải danh sách quà.");
+      } finally {
+        setLoadingGifts(false);
+      }
+    };
+
+    fetchGifts();
+  }, [activeTab, gifts.length]);
 
   const refreshCheckInStatus = async () => {
     const response = await api.get("/api/enduser/check-in");
@@ -437,6 +471,18 @@ const EndUserHome = () => {
           [registrationId]: { predictionType: form.predictionType || "Top1", stake: "" },
         }));
         setPredictionMessage(null);
+
+        // Refresh user points after successful prediction
+        try {
+          const userResponse = await api.get("/api/auth/me");
+          if (userResponse.data?.status === "Success" && userResponse.data?.data) {
+            setCurrentUser(userResponse.data.data);
+            const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
+            dispatch(loginSuccess({ user: userResponse.data.data, token: currentToken }));
+          }
+        } catch (error) {
+          console.error("Failed to refresh user points:", error);
+        }
       } else {
         setPredictionMessage({ type: "error", text: response.data?.message || "Không thể đặt dự đoán." });
       }
@@ -615,6 +661,97 @@ const EndUserHome = () => {
     setAIChatModal(null);
     setAIChatInput("");
     setAIChatError(null);
+  };
+
+  const openRedeemConfirm = (gift) => {
+    setRedeemConfirmModal(gift);
+    setRedeemError(null);
+  };
+
+  const closeRedeemConfirm = () => {
+    if (loadingRedeem) return;
+    setRedeemConfirmModal(null);
+    setRedeemError(null);
+  };
+
+  const submitRedeem = async () => {
+    const gift = redeemConfirmModal;
+    const giftId = gift?._id;
+
+    if (!giftId) {
+      setRedeemError("Không tìm thấy mã quà.");
+      return;
+    }
+
+    setLoadingRedeem(true);
+    setRedeemError(null);
+    try {
+      const response = await api.post(`/api/enduser/gifts/${giftId}/redeem`);
+
+      if (response.data?.status === "Success" && response.data?.data) {
+        const data = response.data.data;
+        const redemptionCode = data.redemption?.code || data.code || data.redeemCode || "";
+        
+        setRedeemSuccessModal({
+          gift: gift,
+          code: redemptionCode,
+          remainingPoints: data.remainingPoints,
+        });
+        setRedeemConfirmModal(null);
+
+        // Refresh user points
+        try {
+          const userResponse = await api.get("/api/auth/me");
+          if (userResponse.data?.status === "Success" && userResponse.data?.data) {
+            setCurrentUser(userResponse.data.data);
+            const currentToken = token || localStorage.getItem("token")?.replaceAll('"', "");
+            dispatch(loginSuccess({ user: userResponse.data.data, token: currentToken }));
+          }
+        } catch (error) {
+          console.error("Failed to refresh user points:", error);
+        }
+
+        // Refresh gifts list
+        try {
+          const giftsResponse = await api.get("/api/enduser/gifts");
+          if (giftsResponse.data?.status === "Success") {
+            setGifts(normalizeArray(giftsResponse.data.data));
+          }
+        } catch (error) {
+          console.error("Failed to refresh gifts list:", error);
+        }
+      } else {
+        setRedeemError(response.data?.message || "Không thể đổi quà.");
+      }
+    } catch (error) {
+      setRedeemError(error.response?.data?.message || "Lỗi khi đổi quà.");
+    } finally {
+      setLoadingRedeem(false);
+    }
+  };
+
+  const openRedemptionHistory = async () => {
+    setRedemptionHistoryModal(true);
+    setLoadingRedemptionHistory(true);
+    setRedemptionHistoryError(null);
+    try {
+      const response = await api.get("/api/enduser/redemptions");
+      if (response.data?.status === "Success") {
+        setRedemptionHistory(normalizeArray(response.data.data));
+      } else {
+        setRedemptionHistoryError(response.data?.message || "Không thể tải lịch sử đổi quà.");
+      }
+    } catch (error) {
+      setRedemptionHistoryError(error.response?.data?.message || "Lỗi khi tải lịch sử đổi quà.");
+    } finally {
+      setLoadingRedemptionHistory(false);
+    }
+  };
+
+  const closeRedemptionHistory = () => {
+    setRedemptionHistoryModal(false);
+    setRedemptionHistory([]);
+    setRedemptionHistoryError(null);
   };
 
   const handleLogout = () => {
@@ -1009,6 +1146,84 @@ const EndUserHome = () => {
               </div>
             ) : (
               <div className="rounded-[26px] border border-cyan-400/10 bg-[#10203a] p-8 text-center text-slate-400">{showFollowingOnly ? "Bạn chưa follow jockey nào." : "Hiện chưa có jockey nào."}</div>
+            )}
+          </div>
+          ) : activeTab === "gifts" ? (
+          <div className="space-y-6">
+            <div className="overflow-hidden rounded-[32px] border border-fuchsia-400/10 bg-[radial-gradient(circle_at_top_left,_rgba(168,85,247,0.16),_rgba(5,3,17,0.96)_48%)] p-8 shadow-[0_24px_80px_rgba(7,13,38,0.55)]">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-4 py-2 text-sm text-fuchsia-300">
+                    <Gift size={16} /> Đổi quà thưởng
+                  </div>
+                  <h1 className="mt-5 text-4xl font-black leading-tight md:text-5xl">Cửa Hàng Quà Tặng</h1>
+                  <p className="mt-3 max-w-2xl text-sm text-slate-400 md:text-base">Dùng điểm thưởng của bạn để đổi các quà tặng hấp dẫn — thẻ quà, voucher, và nhiều ưu đãi khác.</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-right">
+                    <p className="text-3xl font-black text-fuchsia-300">{loadingGifts ? "..." : gifts.length}</p>
+                    <p className="text-xs text-slate-400">Quà có sẵn</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openRedemptionHistory}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-fuchsia-300/20 bg-fuchsia-300/10 px-4 py-2 text-sm font-bold text-fuchsia-200 hover:bg-fuchsia-300/15"
+                  >
+                    📜 Lịch Sử Đổi Quà
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {loadingGifts ? (
+              <div className="rounded-[26px] border border-fuchsia-400/10 bg-[#1a0d28] p-8 text-center text-slate-400">Đang tải danh sách quà...</div>
+            ) : giftsError ? (
+              <div className="rounded-[26px] border border-rose-400/20 bg-rose-500/10 p-6 text-rose-200">{giftsError}</div>
+            ) : gifts.length ? (
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {gifts.map((gift) => (
+                  <div key={gift._id} className="group overflow-hidden rounded-[28px] border border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-400/10 to-purple-600/5 p-6 shadow-[0_20px_60px_rgba(168,85,247,0.15)] ring-1 ring-inset ring-fuchsia-400/10 transition hover:-translate-y-1 hover:border-fuchsia-300/40 hover:shadow-[0_24px_80px_rgba(168,85,247,0.25)]">
+                    {gift.imageUrl ? (
+                      <img src={gift.imageUrl} alt={gift.name} className="h-40 w-full rounded-2xl object-cover mb-4" />
+                    ) : (
+                      <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-fuchsia-400/20 to-purple-600/10 mb-4 flex items-center justify-center border border-fuchsia-300/20">
+                        <Gift size={32} className="text-fuchsia-300/50" />
+                      </div>
+                    )}
+
+                    <h3 className="text-lg font-black text-white">{gift.name}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-300">{gift.description}</p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl bg-white/[0.06] p-3 border border-white/10">
+                        <p className="text-xs text-slate-500">Giá đổi</p>
+                        <p className="mt-2 text-lg font-black text-fuchsia-300">{gift.pointsCost?.toLocaleString("vi-VN") || 0}</p>
+                        <p className="text-[10px] text-slate-500">điểm</p>
+                      </div>
+                      <div className="rounded-2xl bg-white/[0.06] p-3 border border-white/10">
+                        <p className="text-xs text-slate-500">Còn lại</p>
+                        <p className="mt-2 text-lg font-black text-emerald-300">{gift.quantity || 0}</p>
+                        <p className="text-[10px] text-slate-500">cái</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openRedeemConfirm(gift)}
+                      disabled={!gift.quantity || displayPoints < gift.pointsCost}
+                      className={`mt-5 w-full rounded-2xl px-4 py-3 text-sm font-black transition ${
+                        displayPoints >= gift.pointsCost && gift.quantity
+                          ? "bg-gradient-to-r from-fuchsia-400 to-pink-500 text-white hover:opacity-90"
+                          : "bg-slate-600/30 text-slate-500 cursor-not-allowed"
+                      }`}
+                    >
+                      {displayPoints < gift.pointsCost ? "Điểm không đủ" : !gift.quantity ? "Hết hàng" : "Đổi Quà"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[26px] border border-fuchsia-400/10 bg-[#1a0d28] p-8 text-center text-slate-400">Hiện chưa có quà nào.</div>
             )}
           </div>
           ) : (
@@ -1630,6 +1845,174 @@ const EndUserHome = () => {
           </div>
         );
       })()}
+
+      {redemptionHistoryModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-[32px] border border-fuchsia-300/20 bg-[#0b1020] p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-300">Lịch Sử Đổi Quà</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Danh Sách Mã Code</h3>
+              </div>
+              <button type="button" onClick={closeRedemptionHistory} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                Đóng
+              </button>
+            </div>
+
+            <div className="mt-5 min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+              {loadingRedemptionHistory ? (
+                <div className="p-8 text-center text-slate-400">Đang tải lịch sử đổi quà...</div>
+              ) : redemptionHistoryError ? (
+                <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{redemptionHistoryError}</div>
+              ) : redemptionHistory.length ? (
+                <div className="space-y-3">
+                  {redemptionHistory.map((redemption, index) => (
+                    <div key={redemption._id || index} className="rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-400/5 to-purple-600/5 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-black text-fuchsia-300">{redemption.giftName || "Quà tặng"}</h4>
+                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                              redemption.status === "Issued" 
+                                ? "bg-emerald-400/20 text-emerald-300"
+                                : "bg-slate-500/20 text-slate-300"
+                            }`}>
+                              {redemption.status || "Unknown"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-400">{redemption.description}</p>
+                          <p className="mt-2 text-xs text-slate-500">🕐 {formatDateTime(redemption.redeemedAt)}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-xl bg-[#101a30] p-3 border border-fuchsia-300/30">
+                        <p className="text-xs text-slate-500 mb-1">Mã Code</p>
+                        <p className="text-sm font-mono font-black text-fuchsia-300 tracking-wide">{redemption.code}</p>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                        <span>💰 {redemption.pointsPaid?.toLocaleString("vi-VN") || 0} điểm</span>
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(redemption.code)}
+                          className="rounded px-2 py-1 hover:bg-white/10 text-fuchsia-300 hover:text-fuchsia-200"
+                        >
+                          Sao Chép
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400">Bạn chưa đổi quà nào.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {redeemConfirmModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-fuchsia-300/20 bg-[#0b1020] p-6 shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-300">Xác nhận đổi quà</p>
+            <h3 className="mt-2 text-2xl font-black text-white">{redeemConfirmModal?.name || "Quà tặng"}</h3>
+            
+            <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Giá đổi:</span>
+                <span className="text-lg font-black text-fuchsia-300">{redeemConfirmModal?.pointsCost?.toLocaleString("vi-VN") || 0} điểm</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Điểm hiện tại:</span>
+                <span className="text-lg font-black text-cyan-300">{displayPoints?.toLocaleString("vi-VN") || 0} điểm</span>
+              </div>
+              <div className="border-t border-white/10 pt-3">
+                <span className="text-sm text-slate-400">Sẽ còn lại:</span>
+                <span className="ml-2 text-lg font-black text-emerald-300">
+                  {(displayPoints - (redeemConfirmModal?.pointsCost || 0))?.toLocaleString("vi-VN") || 0} điểm
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/5 p-4">
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5">ℹ️</span>
+                <div>
+                  <p className="text-sm font-bold text-amber-300">Mã Code sẽ được gửi ngay lập tức</p>
+                  <p className="mt-1 text-xs text-slate-400">Bạn sẽ nhận được mã 10 ký tự (4 chữ + 6 số) để sử dụng quà tặng này.</p>
+                </div>
+              </div>
+            </div>
+
+            {redeemError && (
+              <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-200">{redeemError}</div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button 
+                type="button" 
+                onClick={closeRedeemConfirm} 
+                disabled={loadingRedeem} 
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button 
+                type="button" 
+                onClick={submitRedeem} 
+                disabled={loadingRedeem} 
+                className="rounded-2xl bg-gradient-to-r from-fuchsia-400 to-pink-500 px-5 py-3 text-sm font-black text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingRedeem ? "Đang xử lý..." : "Xác nhận Đổi Quà"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {redeemSuccessModal && (
+        <div className="fixed inset-0 z-[81] flex items-center justify-center bg-black/75 px-4 py-8">
+          <div className="w-full max-w-md rounded-[32px] border border-emerald-400/20 bg-gradient-to-br from-emerald-400/5 to-emerald-600/5 p-6 shadow-2xl">
+            <div className="text-center">
+              <p className="text-4xl">🎉</p>
+              <p className="mt-3 text-xs font-bold uppercase tracking-[0.35em] text-emerald-300">Đổi quà thành công</p>
+              <h3 className="mt-2 text-2xl font-black text-white">{redeemSuccessModal?.gift?.name || "Quà tặng"}</h3>
+            </div>
+
+            <div className="mt-6 rounded-[24px] border border-cyan-300/30 bg-cyan-400/10 p-6">
+              <p className="text-center text-sm text-slate-400">Mã Code của bạn</p>
+              <div className="mt-4 rounded-2xl bg-[#101a30] p-4 border border-cyan-300/20">
+                <p className="text-center text-2xl font-mono font-black text-cyan-300 tracking-widest">
+                  {redeemSuccessModal?.code}
+                </p>
+              </div>
+              <p className="mt-3 text-center text-xs text-slate-500">10 ký tự (4 chữ + 6 số)</p>
+            </div>
+
+            <div className="mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/5 p-4">
+              <p className="text-sm font-bold text-amber-300">Điểm còn lại</p>
+              <p className="mt-2 text-2xl font-black text-amber-300">{redeemSuccessModal?.remainingPoints?.toLocaleString("vi-VN") || 0} điểm</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(redeemSuccessModal?.code);
+                setRedeemSuccessModal(null);
+              }}
+              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-3 text-sm font-black text-white hover:opacity-90"
+            >
+              Sao Chép Mã & Đóng
+            </button>
+
+            <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-400 space-y-2">
+              <p>✅ Quà đã được cộng vào tài khoản của bạn</p>
+              <p>✅ Hãy lưu mã này ở nơi an toàn</p>
+              <p>✅ Mã có thể được dùng để nhận quà thực tế</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
