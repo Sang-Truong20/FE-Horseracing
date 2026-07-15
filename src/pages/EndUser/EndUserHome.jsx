@@ -158,6 +158,15 @@ const EndUserHome = () => {
   const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
   const [currentUserError, setCurrentUserError] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [aiPredictions, setAIPredictions] = useState({});
+  const [loadingAIPrediction, setLoadingAIPrediction] = useState(null);
+  const [aiPredictionError, setAIPredictionError] = useState(null);
+  const [aiPredictionModal, setAIPredictionModal] = useState(null);
+  const [aiChatModal, setAIChatModal] = useState(null);
+  const [aiChatMessages, setAIChatMessages] = useState({});
+  const [aiChatInput, setAIChatInput] = useState("");
+  const [loadingAIChat, setLoadingAIChat] = useState(false);
+  const [aiChatError, setAIChatError] = useState(null);
 
   useEffect(() => {
     setCurrentUser(user || null);
@@ -498,6 +507,116 @@ const EndUserHome = () => {
     navigate("/profile");
   };
 
+  const fetchAIPrediction = async (race) => {
+    const raceId = race?._id || race?.raceId;
+    if (!raceId) {
+      setAIPredictionError("Không tìm thấy mã trận đấu.");
+      return;
+    }
+
+    setLoadingAIPrediction(raceId);
+    setAIPredictionError(null);
+    try {
+      const response = await api.get(`/api/races/${raceId}/ai-predict`);
+      if (response.data?.status === "Success" && response.data?.data) {
+        const data = response.data.data;
+        setAIPredictions((current) => ({
+          ...current,
+          [raceId]: data,
+        }));
+        setAIPredictionModal({
+          race: data.race || race,
+          predictions: data.predictions || [],
+          aiAnalysis: data.aiAnalysis || "",
+          disclaimer: data.disclaimer || "",
+        });
+      } else {
+        setAIPredictionError(response.data?.message || "Không thể tải dự đoán AI.");
+      }
+    } catch (error) {
+      setAIPredictionError(error.response?.data?.message || "Lỗi khi tải dự đoán AI.");
+    } finally {
+      setLoadingAIPrediction(null);
+    }
+  };
+
+  const openAIChat = (race) => {
+    const raceId = race?._id || race?.raceId;
+    if (!raceId) {
+      setAIChatError("Không tìm thấy mã trận đấu.");
+      return;
+    }
+
+    if (!aiChatMessages[raceId]) {
+      setAIChatMessages((current) => ({
+        ...current,
+        [raceId]: [],
+      }));
+    }
+    setAIChatModal({ race });
+    setAIChatInput("");
+    setAIChatError(null);
+  };
+
+  const sendAIChatMessage = async () => {
+    const race = aiChatModal?.race;
+    const raceId = race?._id || race?.raceId;
+    const message = aiChatInput.trim();
+
+    if (!raceId) {
+      setAIChatError("Không tìm thấy mã trận đấu.");
+      return;
+    }
+
+    if (!message) {
+      setAIChatError("Vui lòng nhập câu hỏi.");
+      return;
+    }
+
+    setLoadingAIChat(true);
+    setAIChatError(null);
+
+    try {
+      const currentMessages = aiChatMessages[raceId] || [];
+      const history = currentMessages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      const response = await api.post(`/api/races/${raceId}/ai-chat`, {
+        message,
+        history,
+      });
+
+      if (response.data?.status === "Success" && response.data?.data) {
+        const data = response.data.data;
+
+        setAIChatMessages((current) => {
+          const messages = [...(current[raceId] || [])];
+          messages.push({ role: "user", content: message });
+          messages.push({ role: "assistant", content: data.reply });
+          return {
+            ...current,
+            [raceId]: messages,
+          };
+        });
+        setAIChatInput("");
+      } else {
+        setAIChatError(response.data?.message || "Không thể tải phản hồi từ AI.");
+      }
+    } catch (error) {
+      setAIChatError(error.response?.data?.message || "Lỗi khi gọi AI chat.");
+    } finally {
+      setLoadingAIChat(false);
+    }
+  };
+
+  const closeAIChat = () => {
+    setAIChatModal(null);
+    setAIChatInput("");
+    setAIChatError(null);
+  };
+
   const handleLogout = () => {
     setUserMenuOpen(false);
     dispatch(logout());
@@ -726,6 +845,23 @@ const EndUserHome = () => {
                           <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Đăng ký</p>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => fetchAIPrediction(race)}
+                        disabled={loadingAIPrediction === race._id}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-400 to-pink-500 px-5 py-3 text-sm font-black text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <span>🤖</span>
+                        {loadingAIPrediction === race._id ? "Đang dự đoán..." : "Dự Đoán AI"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAIChat(race)}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-400 to-cyan-500 px-5 py-3 text-sm font-black text-white hover:opacity-90"
+                      >
+                        <span>💬</span>
+                        Hỏi AI
+                      </button>
                       <button type="button" onClick={() => openRaceLeaderboard(race)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-[#04111d]">
                         <ShieldCheck size={16} />
                         Xem Chi Tiết Trận
@@ -1247,6 +1383,253 @@ const EndUserHome = () => {
           </div>
         </div>
       )}
+
+      {aiPredictionModal && (() => {
+        const raceData = aiPredictionModal.race || aiPredictionModal.predictions?.[0]?.race;
+        const predictions = aiPredictionModal.predictions || [];
+        const aiAnalysis = aiPredictionModal.aiAnalysis;
+        const disclaimer = aiPredictionModal.disclaimer;
+
+        return (
+          <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 px-4 py-8">
+            <div className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-[32px] border border-purple-300/20 bg-[#0b1020] p-6 shadow-2xl">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/20 bg-purple-400/10 px-3 py-1.5 text-xs font-bold text-purple-300">
+                    <span>🤖</span>
+                    Dự Đoán AI
+                  </div>
+                  <h3 className="mt-3 text-2xl font-black text-white">{raceData?.name || "Cuộc đua"}</h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                    <span>📍 {raceData?.location || "Chưa có địa điểm"}</span>
+                    <span>📅 {formatRaceDate(raceData?.raceDate)}</span>
+                    {raceData?.distanceM && <span>📏 {raceData.distanceM}m</span>}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setAIPredictionModal(null)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                  Đóng
+                </button>
+              </div>
+
+              {aiPredictionError && (
+                <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-200">{aiPredictionError}</div>
+              )}
+
+              {predictions && Array.isArray(predictions) && predictions.length > 0 ? (
+                <div className="mt-6 min-h-0 flex-1 space-y-4 overflow-y-auto">
+                  {/* Predictions List */}
+                  {predictions.map((prediction, index) => (
+                    <div key={index} className="rounded-[24px] border border-purple-400/20 bg-purple-400/5 p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        {/* Horse & Jockey Info */}
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className={`${horseDots[index % horseDots.length]} h-3 w-3 rounded-full`} />
+                            <h4 className="text-lg font-black text-white">{prediction.horse?.name || "Ngựa"}</h4>
+                            <span className="text-sm text-slate-400">{prediction.jockey?.fullName || "Jockey"}</span>
+                          </div>
+
+                          {/* Stats Grid */}
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-xl bg-white/[0.06] p-3 border border-white/10">
+                              <p className="text-xs text-slate-500">Tỷ Lệ Thắng</p>
+                              <p className="mt-2 text-2xl font-black text-cyan-300">{prediction.predictedWinPercent?.toFixed(1) || 0}%</p>
+                            </div>
+                            <div className="rounded-xl bg-white/[0.06] p-3 border border-white/10">
+                              <p className="text-xs text-slate-500">Lịch Sử Ngựa</p>
+                              <p className="mt-2 text-2xl font-black text-amber-300">{prediction.horseWinRatePercent?.toFixed(1) || 0}%</p>
+                            </div>
+                            <div className="rounded-xl bg-white/[0.06] p-3 border border-white/10">
+                              <p className="text-xs text-slate-500">Jockey</p>
+                              <p className="mt-2 text-2xl font-black text-emerald-300">{prediction.jockeyWinRatePercent?.toFixed(1) || 0}%</p>
+                            </div>
+                            <div className="rounded-xl bg-white/[0.06] p-3 border border-white/10">
+                              <p className="text-xs text-slate-500">Phong Độ/Thể Chất</p>
+                              <p className="mt-2 text-lg font-black text-fuchsia-300">
+                                {prediction.recentFormPercent?.toFixed(1) || 0}%
+                                <span className="text-xs text-slate-400"> / {prediction.physicalPercent?.toFixed(1) || 0}%</span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ranking Badge */}
+                        <div className="flex-shrink-0 lg:mt-0">
+                          <div className="rounded-2xl bg-gradient-to-br from-purple-400 to-pink-500 p-4 text-center">
+                            <p className="text-xs font-bold text-white">Xếp Hạng</p>
+                            <p className="mt-2 text-4xl font-black text-white">#{index + 1}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* AI Analysis Section */}
+                  {aiAnalysis && (
+                    <div className="mt-6 rounded-[24px] border border-purple-400/30 bg-gradient-to-br from-purple-400/10 to-purple-600/5 p-6">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1 text-2xl">🔍</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold uppercase tracking-[0.2em] text-purple-300">Phân Tích Chi Tiết Từ AI</p>
+                          <div className="mt-4 text-sm leading-relaxed text-slate-300 prose-invert max-w-none">
+                            {aiAnalysis.split('\n\n').map((paragraph, idx) => (
+                              <p key={idx} className="mb-3">
+                                {paragraph.split('\n').map((line, lineIdx) => (
+                                  <span key={lineIdx}>
+                                    {line}
+                                    {lineIdx < paragraph.split('\n').length - 1 && <br />}
+                                  </span>
+                                ))}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Disclaimer */}
+                  <div className="mt-4 rounded-[24px] border border-amber-400/20 bg-amber-400/5 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">⚠️</div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-300">Lưu Ý Quan Trọng</p>
+                        <p className="mt-2 text-sm text-slate-400">
+                          {disclaimer || "Dự đoán chỉ mang tính chất tham khảo, dựa trên dữ liệu lịch sử. Đua ngựa có yếu tố ngẫu nhiên và không đảm bảo chính xác 100%."}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          <strong>Công thức tính:</strong> Tỷ lệ thắng lịch sử ngựa (50%) + Jockey (30%) + Phong độ/Thể trạng (20%) - Laplace smoothed
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-6 p-8 text-center text-slate-400">Không có dữ liệu dự đoán.</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {aiChatModal && (() => {
+        const race = aiChatModal.race;
+        const raceId = race?._id || race?.raceId;
+        const messages = aiChatMessages[raceId] || [];
+
+        return (
+          <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 px-4 py-8">
+            <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-[32px] border border-cyan-300/20 bg-[#0b1020] p-6 shadow-2xl">
+              {/* Header */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-bold text-cyan-300">
+                    <span>💬</span>
+                    AI Chat
+                  </div>
+                  <h3 className="mt-3 text-2xl font-black text-white">{race?.name || "Cuộc đua"}</h3>
+                  <p className="mt-1 text-sm text-slate-400">Hỏi đáp về dự đoán và thông tin trận đấu</p>
+                </div>
+                <button type="button" onClick={closeAIChat} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10">
+                  Đóng
+                </button>
+              </div>
+
+              {/* Messages Area */}
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-[24px] border border-white/10 bg-white/[0.03] p-4 space-y-4">
+                {messages.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-3xl">💬</p>
+                      <p className="mt-3 text-sm text-slate-400">Hãy đặt câu hỏi về trận đấu này.</p>
+                      <p className="mt-2 text-xs text-slate-500">Ví dụ: "Con ngựa nào có khả năng về nhất?"</p>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg, index) => (
+                    <div key={index} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                      {/* Avatar */}
+                      <div className={`flex-shrink-0 mt-1 ${msg.role === "user" ? "text-amber-400" : "text-cyan-400"}`}>
+                        <div className={`flex items-center justify-center h-8 w-8 rounded-full border ${msg.role === "user" ? "bg-amber-400/10 border-amber-400/30" : "bg-cyan-400/10 border-cyan-400/30"}`}>
+                          {msg.role === "user" ? "👤" : "🤖"}
+                        </div>
+                      </div>
+
+                      {/* Message */}
+                      <div className={`max-w-xs ${msg.role === "user" ? "lg:max-w-md" : "lg:max-w-lg"}`}>
+                        <div className={`rounded-2xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-amber-400/15 text-amber-50 border border-amber-400/20" : "bg-cyan-400/10 text-slate-200 border border-cyan-400/20"}`}>
+                          {msg.content.split('\n').map((line, lineIdx) => (
+                            <span key={lineIdx}>
+                              {line}
+                              {lineIdx < msg.content.split('\n').length - 1 && <br />}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {loadingAIChat && (
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 mt-1 text-cyan-400">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-cyan-400/10 border border-cyan-400/30">
+                        <span className="animate-pulse">🤖</span>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-cyan-400/10 px-4 py-3 border border-cyan-400/20">
+                      <div className="flex gap-1">
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0s" }} />
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0.2s" }} />
+                        <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0.4s" }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {aiChatError && (
+                  <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-200">{aiChatError}</div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className="mt-4 flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={aiChatInput}
+                    onChange={(e) => {
+                      setAIChatInput(e.target.value);
+                      setAIChatError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && !loadingAIChat) {
+                        sendAIChatMessage();
+                      }
+                    }}
+                    disabled={loadingAIChat}
+                    placeholder="Nhập câu hỏi..."
+                    className="flex-1 rounded-2xl border border-white/10 bg-[#101a30] px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={sendAIChatMessage}
+                    disabled={loadingAIChat || !aiChatInput.trim()}
+                    className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-black text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loadingAIChat ? "..." : "Gửi"}
+                  </button>
+                </div>
+
+                {/* Disclaimer */}
+                <p className="text-xs text-slate-500">
+                  💡 AI trả lời dựa trên dữ liệu dự đoán của trận đấu này. Kết quả chỉ mang tính tham khảo.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
