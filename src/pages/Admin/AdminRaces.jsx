@@ -36,6 +36,7 @@ const AdminRaces = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [creating, setCreating] = useState(false);
   const [referees, setReferees] = useState([]);
+  const [owners, setOwners] = useState([]);
   const [horseLabels, setHorseLabels] = useState({});
   const [userLabels, setUserLabels] = useState({});
   const [oddsModalVisible, setOddsModalVisible] = useState(false);
@@ -104,6 +105,46 @@ const AdminRaces = () => {
     } catch (err) {
       console.error("Fetch referees error:", err);
       setReferees([]);
+    }
+  };
+
+  const fetchOwners = async () => {
+    try {
+      const response = await api.get("/api/admin/owners");
+      const payload = response.data?.status === "Success" ? response.data.data : [];
+      const ownerList = Array.isArray(payload) ? payload : [];
+      if (ownerList.length) {
+        setOwners(
+          ownerList.map((owner) => ({
+            ...owner,
+            value: owner._id || owner.id,
+            label: owner.fullName || owner.stableName || owner.username || owner.email || "-",
+          }))
+        );
+        return;
+      }
+    } catch (err) {
+      console.error("Fetch owners error:", err);
+    }
+
+    try {
+      const response = await api.get("/api/admin/users");
+      const payload = response.data?.data ?? response.data ?? [];
+      const users = Array.isArray(payload) ? payload : payload.users ?? payload.items ?? [];
+      const ownerList = users.filter((user) => {
+        const role = user.role || user.userRole || user.roleName || user.accountType;
+        return ["OwnerHorse", "Owner", "ownerhorse", "owner"].includes(role);
+      });
+      setOwners(
+        ownerList.map((owner) => ({
+          ...owner,
+          value: owner._id || owner.id,
+          label: owner.fullName || owner.stableName || owner.username || owner.email || "-",
+        }))
+      );
+    } catch (fallbackError) {
+      console.error("Fetch owners fallback error:", fallbackError);
+      setOwners([]);
     }
   };
 
@@ -210,6 +251,7 @@ const AdminRaces = () => {
         prizeMoney: Number(values.prizeMoney),
         entryFee: Number(values.entryFee),
         addEntryFeeToPrize: Boolean(values.addEntryFeeToPrize),
+        invitedOwners: (values.invitedOwners || []).map((ownerId) => String(ownerId)),
         prizeDistribution,
       };
 
@@ -256,6 +298,7 @@ const AdminRaces = () => {
     fetchUsers();
     fetchHorses();
     fetchReferees();
+    fetchOwners();
   }, []);
 
   return (
@@ -594,6 +637,22 @@ const AdminRaces = () => {
                 label="Cộng phí vào thưởng"
               >
                 <Checkbox>Thêm entry fee vào prize</Checkbox>
+              </Form.Item>
+
+              <Form.Item
+                name="invitedOwners"
+                label="Mời owner vào cuộc đua"
+              >
+                <Select
+                  mode="multiple"
+                  showSearch
+                  placeholder="Chọn owner"
+                  optionFilterProp="label"
+                  options={owners.map((owner) => ({
+                    label: owner.label,
+                    value: owner.value,
+                  }))}
+                />
               </Form.Item>
 
               <Form.Item
