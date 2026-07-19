@@ -48,6 +48,23 @@ const getRegistrationPenalty = (registration) => registration?.penalty || regist
 
 const normalizeText = (value) => (value == null ? "" : String(value).trim());
 
+const getTotalTimeSec = (finishTimeSec, timePenaltySec = 0) => Number(finishTimeSec) + Number(timePenaltySec || 0);
+
+const rankResultsByTotalTime = (results) => results
+  .map((result, index) => ({
+    ...result,
+    totalTimeSec: getTotalTimeSec(result.finishTimeSec, result.penalty?.timePenaltySec),
+    index,
+  }))
+  .sort((left, right) => left.totalTimeSec - right.totalTimeSec || left.index - right.index)
+  .map(({ index, totalTimeSec, ...result }, rank) => ({ ...result, rank: rank + 1, totalTimeSec }));
+
+const getLeaderboardPrizeMoney = (race, item) => {
+  const rank = Number(item.rank ?? item.position);
+  const percentage = race?.prizeDistribution?.find((distribution) => Number(distribution.rank) === rank)?.percent;
+  return Number(race?.prizeMoney || 0) * Number(percentage || 0) / 100;
+};
+
 const getRegistrationApprovalStatus = (registration) => normalizeText(registration?.approvalStatus || registration?.status || registration?.approval?.status).toLowerCase();
 
 const getApprovedRegistrations = (registrations = []) => registrations.filter((registration) => getRegistrationApprovalStatus(registration) === "approved");
@@ -207,8 +224,11 @@ const RefereeRaceDetail = () => {
       return null;
     }
 
+    const rankedResults = rankResultsByTotalTime(results);
+    setResultRanks(Object.fromEntries(rankedResults.map(({ registrationId, rank }) => [registrationId, rank])));
+
     return {
-      results,
+      results: rankedResults.map(({ totalTimeSec, ...result }) => result),
       resultProofImages: [],
     };
   };
@@ -253,7 +273,7 @@ const RefereeRaceDetail = () => {
         setResultFeedbackModal({
           type: "error",
           title: "Lỗi chốt kết quả",
-          message: response.data?.message || (isEditingFinalizedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."),
+          message: response.data?.message || (isEditingRankedResults ? "Không thể cập nhật kết quả race." : "Không thể chốt kết quả race."),
         });
       }
     } catch (err) {
@@ -364,6 +384,24 @@ const RefereeRaceDetail = () => {
     }
   };
 
+  const approvedRegistrations = getApprovedRegistrations(race?.registrations || []);
+  const previewResults = approvedRegistrations.map((registration) => {
+    const registrationId = getRegistrationId(registration);
+    const penalty = resultPenalties[registrationId] || {};
+    return {
+      registrationId,
+      finishTimeSec: Number(resultFinishTimes[registrationId]),
+      penalty: { timePenaltySec: penalty.timePenaltySec === "" ? 0 : Number(penalty.timePenaltySec) },
+    };
+  });
+  const canPreviewRanks = previewResults.length > 0 && previewResults.every((result) => (
+    Number.isFinite(result.finishTimeSec) && result.finishTimeSec >= 0
+    && Number.isFinite(result.penalty.timePenaltySec) && result.penalty.timePenaltySec >= 0
+  ));
+  const previewResultsByRegistrationId = Object.fromEntries(
+    (canPreviewRanks ? rankResultsByTotalTime(previewResults) : []).map((result) => [result.registrationId, result])
+  );
+
   return (
     <div className="space-y-8">
       <button
@@ -434,7 +472,7 @@ const RefereeRaceDetail = () => {
                   <p className="text-xs font-bold text-[#D9A520]">Chấm kết quả</p>
                   <h2 className="mt-2 text-2xl font-black text-white">{race.status === "Ranked" ? "Cập nhật kết quả cuộc đua" : "Chốt kết quả cuộc đua"}</h2>
                   <p className="mt-2 max-w-3xl text-sm text-gray-400">
-                    Nhập thời gian hoàn thành và penalty nếu có. Backend sẽ tự xếp hạng theo effective time = finishTimeSec + tổng phạt Active.
+                    Hạng được tự tính theo tổng thời gian = thời gian gốc + số giây phạt. Tổng thời gian nhỏ nhất là hạng 1.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -463,7 +501,9 @@ const RefereeRaceDetail = () => {
                 {race.registrations?.length ? (
                   race.registrations.map((registration) => {
                     const registrationId = getRegistrationId(registration);
-                    const rankStyle = getWinnerRankStyle(resultRanks[registrationId]);
+                    const previewResult = previewResultsByRegistrationId[registrationId];
+                    const displayedRank = previewResult?.rank ?? resultRanks[registrationId];
+                    const rankStyle = getWinnerRankStyle(displayedRank);
                     const WinnerIcon = rankStyle?.Icon;
                     return (
                       <div key={registrationId} className={`rounded-[28px] border p-5 transition-all ${rankStyle?.cardClassName || "border-white/10 bg-[#0A0D17]"}`}>
@@ -479,8 +519,8 @@ const RefereeRaceDetail = () => {
                               </div>
                               <p className="mt-1 text-sm text-gray-400">Jockey: {registration.jockey?.fullName || "-"}</p>
                               <p className="mt-1 text-sm text-gray-400">Owner: {registration.owner?.stableName || registration.owner?.fullName || "-"}</p>
-                              <p className="mt-1 text-sm text-gray-400">Hạng: {registration.finalRank ?? "-"}</p>
-                              <p className="mt-1 text-sm text-gray-400">Finish time: {registration.finishTimeSec ?? "-"} giây</p>
+                              <p className="mt-1 text-sm text-gray-400">Hạng: {displayedRank || "-"}</p>
+                              <p className="mt-1 text-sm text-gray-400">Tổng thời gian: {previewResult ? `${previewResult.totalTimeSec} giây` : "Nhập thời gian để tính"}</p>
                             </div>
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
@@ -651,6 +691,9 @@ const RefereeRaceDetail = () => {
                             <p className="mt-1 text-xs text-gray-500">{item.approvalStatus || "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
+                            <p>₫ {formatMoney(getLeaderboardPrizeMoney(leaderboardData.race, item))}</p>
+                          </div>
+                          <div className="text-xs text-gray-400">
                             <p>{item.finishTimeSec != null ? `${item.finishTimeSec}s` : "-"}</p>
                           </div>
                           <div className="text-xs text-gray-400">
@@ -788,6 +831,7 @@ const RefereeRaceDetail = () => {
                           <p className="mt-1 text-xs text-gray-500">Owner: {registration?.owner?.stableName || registration?.owner?.fullName || "-"}</p>
                           <p className="mt-1 text-xs text-gray-500">Finish time: {result.finishTimeSec}s</p>
                           {result.penalty && <p className="mt-1 text-xs text-[#F8E7A1]">Penalty: +{result.penalty.timePenaltySec}s - {result.penalty.reason}</p>}
+                          <p className="mt-1 text-xs font-semibold text-emerald-300">Tổng thời gian: {getTotalTimeSec(result.finishTimeSec, result.penalty?.timePenaltySec)}s</p>
                         </div>
                       </div>
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${rankStyle?.badgeClassName || "bg-[#D9A520]/15 text-[#F8E7A1]"}`}>#{result.rank}</span>
