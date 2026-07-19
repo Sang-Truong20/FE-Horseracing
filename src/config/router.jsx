@@ -9,6 +9,7 @@ import ManageHorses from "../pages/Owner/ManageHorses";
 import ManageRaces from "../pages/Owner/ManageRaces";
 import ManageJockeys from "../pages/Owner/ManageJockeys";
 import ManageWallet from "../pages/Owner/ManageWallet";
+import OwnerInvites from "../pages/Owner/OwnerInvites";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUsers from "../pages/Admin/AdminUsers";
 import AdminOwners from "../pages/Admin/AdminOwners";
@@ -100,6 +101,10 @@ export const router = createBrowserRouter([
       {
         path: "wallet",
         element: <OwnerLayout><ManageWallet /></OwnerLayout>,
+      },
+      {
+        path: "invites",
+        element: <OwnerLayout><OwnerInvites /></OwnerLayout>,
       },
       {
         path: "profile",

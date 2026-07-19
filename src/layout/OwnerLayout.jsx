@@ -7,7 +7,7 @@ import api from "../config/axios";
 import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import NotificationMenu from "../components/NotificationMenu";
 import { 
-  LayoutDashboard, Users, ClipboardList, Wallet, 
+  LayoutDashboard, Users, ClipboardList, Wallet, Mail,
   Trophy, Flame, DollarSign, LogOut, Search, PlusCircle
 } from "lucide-react";
 
@@ -42,6 +42,8 @@ const OwnerLayout = ({ children }) => {
         return "Đăng Ký Vào Cuộc Đua";
       case "/owner/wallet":
         return "Quản Lý Ví";
+      case "/owner/invites":
+        return "Lời Mời Tham Gia Cuộc Đua";
       case "/owner/horses":
         return "Quản Lý Ngựa";
       default:
@@ -53,6 +55,7 @@ const OwnerLayout = ({ children }) => {
     { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", badge: 4 },
     { to: "/owner/jockey", icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
     { to: "/owner/races", icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
+    { to: "/owner/invites", icon: <Mail size={20}/>, label: "Lời Mời Tham Gia" },
     { to: "/owner/wallet", icon: <Wallet size={20}/>, label: "Quản Lý Ví" },
   ];
 

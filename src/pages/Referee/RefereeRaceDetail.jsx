@@ -7,6 +7,7 @@ import api from "../../config/axios";
 const statusStyles = {
   Open: "bg-[#203A70] text-[#8DB7FF]",
   Locked: "bg-[#4B2C6F] text-[#D9A520]",
+  Ranked: "bg-[#174A2B] text-[#7DE8B4]",
   Finished: "bg-[#1F4B2C] text-[#7DE8B4]",
   Cancelled: "bg-[#4B2C2C] text-[#FF9C8A]",
   Closed: "bg-[#4B2C6F] text-[#D9A520]",
@@ -44,6 +45,12 @@ const getWinnerRankStyle = (rank) => winnerRankStyles[Number(rank)];
 const getRegistrationResultValue = (registration, key) => registration?.[key] ?? registration?.result?.[key] ?? "";
 
 const getRegistrationPenalty = (registration) => registration?.penalty || registration?.result?.penalty || {};
+
+const normalizeText = (value) => (value == null ? "" : String(value).trim());
+
+const getRegistrationApprovalStatus = (registration) => normalizeText(registration?.approvalStatus || registration?.status || registration?.approval?.status).toLowerCase();
+
+const getApprovedRegistrations = (registrations = []) => registrations.filter((registration) => getRegistrationApprovalStatus(registration) === "approved");
 
 const formatDate = (dateString) => {
   if (!dateString) return "-";
@@ -158,21 +165,19 @@ const RefereeRaceDetail = () => {
   };
 
   const buildResultsPayload = () => {
-    const registrations = race?.registrations || [];
+    const registrations = getApprovedRegistrations(race?.registrations || []);
     const results = registrations.map((registration) => {
       const registrationId = getRegistrationId(registration);
       const penalty = resultPenalties[registrationId] || {};
-      const penaltyReason = penalty.reason || "";
-      const hasPenaltyReason = penaltyReason.trim();
+      const penaltyReason = normalizeText(penalty.reason);
       const hasPenaltyTime = penalty.timePenaltySec !== "";
       const timePenaltySec = hasPenaltyTime ? Number(penalty.timePenaltySec) : 0;
       const result = {
         registrationId,
-        rank: Number(resultRanks[registrationId]),
         finishTimeSec: Number(resultFinishTimes[registrationId]),
       };
 
-      if (hasPenaltyReason || hasPenaltyTime) {
+      if (penaltyReason || hasPenaltyTime) {
         result.penalty = {
           reason: penaltyReason,
           timePenaltySec,
@@ -183,17 +188,17 @@ const RefereeRaceDetail = () => {
     });
 
     if (!registrations.length) {
-      setError("Race chưa có đăng ký để chấm thứ hạng.");
+      setError("Race chưa có đăng ký Approved để chấm kết quả.");
       return null;
     }
 
-    if (results.some((item) => !item.registrationId || !Number.isInteger(item.rank) || item.rank < 1)) {
-      setError("Vui lòng nhập thứ hạng là số nguyên lớn hơn 0 cho tất cả đăng ký.");
+    if (results.some((item) => !item.registrationId)) {
+      setError("Có đăng ký chưa có mã registration hợp lệ.");
       return null;
     }
 
     if (results.some((item) => !Number.isFinite(item.finishTimeSec) || item.finishTimeSec < 0)) {
-      setError("Vui lòng nhập thời gian hoàn thành hợp lệ cho tất cả đăng ký.");
+      setError("Vui lòng nhập thời gian hoàn thành hợp lệ cho tất cả đăng ký Approved.");
       return null;
     }
 
@@ -202,20 +207,17 @@ const RefereeRaceDetail = () => {
       return null;
     }
 
-    const uniqueRanks = new Set(results.map((item) => item.rank));
-    if (uniqueRanks.size !== results.length) {
-      setError("Thứ hạng không được trùng nhau giữa các đăng ký.");
-      return null;
-    }
-
-    return results;
+    return {
+      results,
+      resultProofImages: [],
+    };
   };
 
   const openResultsConfirm = () => {
-    const results = buildResultsPayload();
-    if (!results) return;
+    const payload = buildResultsPayload();
+    if (!payload) return;
 
-    setPendingResults(results);
+    setPendingResults(payload.results);
     setConfirmResultsOpen(true);
     setError(null);
     setSuccessMessage(null);
@@ -227,22 +229,22 @@ const RefereeRaceDetail = () => {
   };
 
   const submitRaceResults = async () => {
-    const results = pendingResults.length ? pendingResults : buildResultsPayload();
-    if (!results) return;
+    const payload = pendingResults.length ? { results: pendingResults, resultProofImages: [] } : buildResultsPayload();
+    if (!payload) return;
 
     setSubmittingResults(true);
     setError(null);
     setSuccessMessage(null);
     try {
-      const isEditingFinalizedResults = race?.status === "Finished";
-      const response = isEditingFinalizedResults
-        ? await api.patch(`/api/referee/races/${id}/results`, { results })
-        : await api.post(`/api/referee/races/${id}/results`, { results });
+      const isEditingRankedResults = race?.status === "Ranked";
+      const response = isEditingRankedResults
+        ? await api.patch(`/api/referee/races/${id}/results`, payload)
+        : await api.post(`/api/referee/races/${id}/results`, payload);
       if (response.data?.status === "Success") {
         setResultFeedbackModal({
           type: "success",
           title: "Chốt kết quả thành công",
-          message: response.data?.message || (isEditingFinalizedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."),
+          message: response.data?.message || (isEditingRankedResults ? "Đã cập nhật kết quả race thành công." : "Đã chốt kết quả race thành công."),
         });
         setConfirmResultsOpen(false);
         setPendingResults([]);
@@ -259,6 +261,39 @@ const RefereeRaceDetail = () => {
         type: "error",
         title: "Lỗi khi gửi kết quả",
         message: err.response?.data?.message || "Lỗi khi gửi kết quả race.",
+      });
+    } finally {
+      setSubmittingResults(false);
+    }
+  };
+
+  const confirmResultsEarly = async () => {
+    setSubmittingResults(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await api.post(`/api/referee/races/${id}/confirm-results`, {
+        resultProofImages: [],
+      });
+      if (response.data?.status === "Success") {
+        setResultFeedbackModal({
+          type: "success",
+          title: "Đã xác nhận kết quả",
+          message: response.data?.message || "Đã finalize kết quả và chuyển race sang Finished.",
+        });
+        await fetchRace();
+      } else {
+        setResultFeedbackModal({
+          type: "error",
+          title: "Lỗi xác nhận kết quả",
+          message: response.data?.message || "Không thể xác nhận kết quả.",
+        });
+      }
+    } catch (err) {
+      setResultFeedbackModal({
+        type: "error",
+        title: "Lỗi xác nhận kết quả",
+        message: err.response?.data?.message || "Lỗi khi gọi API xác nhận kết quả.",
       });
     } finally {
       setSubmittingResults(false);
@@ -386,23 +421,42 @@ const RefereeRaceDetail = () => {
             </div>
           </div>
 
-          {(race.status === "Locked" || race.status === "Finished") && (
+          {race.status === "Finished" && (
+            <div className="rounded-[32px] border border-emerald-500/20 bg-emerald-500/10 p-6 text-emerald-300">
+              Kết quả đã được finalize và không còn chỉnh sửa được. Chỉ admin override được sau này.
+            </div>
+          )}
+
+          {(race.status === "Locked" || race.status === "Ranked") && (
             <div className="rounded-[32px] border border-[#D9A520]/20 bg-[#111827]/70 p-8 shadow-[0_30px_80px_rgba(19,28,52,0.2)]">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-xs font-bold text-[#D9A520]">Chấm kết quả</p>
-                  <h2 className="mt-2 text-2xl font-black text-white">{race.status === "Finished" ? "Sửa kết quả cuộc đua" : "Chốt kết quả cuộc đua"}</h2>
+                  <h2 className="mt-2 text-2xl font-black text-white">{race.status === "Ranked" ? "Cập nhật kết quả cuộc đua" : "Chốt kết quả cuộc đua"}</h2>
                   <p className="mt-2 max-w-3xl text-sm text-gray-400">
-                    Nhập thứ hạng, thời gian hoàn thành và penalty nếu có. Race đã Finished có thể sửa kết quả trong 180 phút sau khi chốt.
+                    Nhập thời gian hoàn thành và penalty nếu có. Backend sẽ tự xếp hạng theo effective time = finishTimeSec + tổng phạt Active.
                   </p>
                 </div>
-                <button
-                  onClick={openResultsConfirm}
-                  disabled={submittingResults || !race.registrations?.length}
-                  className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submittingResults ? "Đang gửi..." : race.status === "Finished" ? "Cập nhật kết quả" : "Chốt kết quả"}
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  {race.status === "Ranked" && (
+                    <button
+                      onClick={confirmResultsEarly}
+                      disabled={submittingResults || !race.registrations?.length}
+                      className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-black uppercase text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {submittingResults ? "Đang xử lý..." : "Xác nhận kết quả"}
+                    </button>
+                  )}
+                  {race.status !== "Finished" && (
+                    <button
+                      onClick={openResultsConfirm}
+                      disabled={submittingResults || !race.registrations?.length}
+                      className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black uppercase text-black transition hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {submittingResults ? "Đang gửi..." : race.status === "Ranked" ? "Cập nhật kết quả" : "Chốt kết quả"}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -431,18 +485,6 @@ const RefereeRaceDetail = () => {
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
                             <label className="block text-sm text-gray-300">
-                              Thứ hạng
-                              <input
-                                type="number"
-                                min="1"
-                                step="1"
-                                value={resultRanks[registrationId] ?? ""}
-                                onChange={(event) => handleRankChange(registrationId, event.target.value)}
-                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="hãy nhập thứ hạng, thời gian"
-                              />
-                            </label>
-                            <label className="block text-sm text-gray-300">
                               Finish time (giây)
                               <input
                                 type="number"
@@ -450,8 +492,9 @@ const RefereeRaceDetail = () => {
                                 step="0.01"
                                 value={resultFinishTimes[registrationId] ?? ""}
                                 onChange={(event) => handleFinishTimeChange(registrationId, event.target.value)}
-                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
-                                placeholder="hãy nhập thứ hạng, thời gian"
+                                disabled={race.status === "Finished"}
+                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520] disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="hãy nhập thời gian"
                               />
                             </label>
                             <label className="block text-sm text-gray-300 sm:col-span-2">
@@ -460,7 +503,8 @@ const RefereeRaceDetail = () => {
                                 type="text"
                                 value={resultPenalties[registrationId]?.reason ?? ""}
                                 onChange={(event) => handlePenaltyChange(registrationId, "reason", event.target.value)}
-                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                                disabled={race.status === "Finished"}
+                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520] disabled:cursor-not-allowed disabled:opacity-50"
                                 placeholder="Bỏ trống nếu không có penalty"
                               />
                             </label>
@@ -472,7 +516,8 @@ const RefereeRaceDetail = () => {
                                 step="0.01"
                                 value={resultPenalties[registrationId]?.timePenaltySec ?? ""}
                                 onChange={(event) => handlePenaltyChange(registrationId, "timePenaltySec", event.target.value)}
-                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520]"
+                                disabled={race.status === "Finished"}
+                                className="mt-2 w-full rounded-2xl border border-white/10 bg-[#141B2F] px-4 py-3 text-white outline-none transition focus:border-[#D9A520] disabled:cursor-not-allowed disabled:opacity-50"
                                 placeholder="0"
                               />
                             </label>
@@ -713,9 +758,9 @@ const RefereeRaceDetail = () => {
               <p className="text-xs font-bold text-[#D9A520]">Xác nhận kết quả</p>
               <h3 className="mt-2 text-2xl font-black text-white">{race?.status === "Finished" ? "Cập nhật kết quả race?" : "Chốt kết quả race?"}</h3>
               <p className="mt-2 text-sm text-gray-400">
-                {race?.status === "Finished"
-                  ? "Thao tác này sẽ sửa kết quả đã chốt. Vui lòng kiểm tra lại thứ hạng, thời gian và penalty trước khi xác nhận."
-                  : "Thao tác này sẽ chia thưởng, trả hireFee và chuyển race sang Finished. Vui lòng kiểm tra lại thứ hạng, thời gian và penalty trước khi xác nhận."}
+                {race?.status === "Finished" || race?.status === "Ranked"
+                  ? "Thao tác này sẽ ghi đè kết quả đã chấm. Vui lòng kiểm tra lại thời gian và penalty trước khi xác nhận."
+                  : "Thao tác này sẽ chấm kết quả và chuyển race sang Ranked. Vui lòng kiểm tra lại thời gian và penalty trước khi xác nhận."}
               </p>
             </div>
 
@@ -764,7 +809,7 @@ const RefereeRaceDetail = () => {
                 disabled={submittingResults}
                 className="rounded-2xl bg-[#D9A520] px-5 py-3 text-sm font-black text-black hover:bg-[#f2cb46] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submittingResults ? "Đang gửi..." : race?.status === "Finished" ? "Xác nhận cập nhật" : "Xác nhận chốt kết quả"}
+                {submittingResults ? "Đang gửi..." : race?.status === "Finished" || race?.status === "Ranked" ? "Xác nhận cập nhật" : "Xác nhận chốt kết quả"}
               </button>
             </div>
           </div>
