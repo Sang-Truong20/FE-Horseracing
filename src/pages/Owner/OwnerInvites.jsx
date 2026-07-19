@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../../config/axios";
-import { AlertCircle, CheckCircle2, Clock3, Mail, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, Mail, XCircle } from "lucide-react";
 import { alertSuccess, alertFail } from "../../assets/hook/useNotification";
 
 const normalizeText = (value) => (value == null ? "" : String(value).trim());
@@ -14,7 +14,7 @@ const normalizeInvites = (payload) => {
   return [];
 };
 
-const getInviteStatus = (invite) => normalizeText(invite?.status || invite?.inviteStatus || invite?.responseStatus || invite?.ownerResponseStatus);
+const getInviteStatus = (invite) => normalizeText(invite?.inviteStatus || invite?.responseStatus || invite?.ownerResponseStatus || invite?.status);
 
 const getRaceStatus = (invite) => normalizeText(invite?.race?.status || invite?.raceStatus || invite?.race?.state || invite?.status);
 
@@ -67,23 +67,14 @@ const OwnerInvites = () => {
       return;
     }
 
-    const inviteStatus = getInviteStatus(invite).toLowerCase();
-    const raceStatus = getRaceStatus(invite).toLowerCase();
-    const canRespond = inviteStatus === "pending" && (raceStatus === "draft" || raceStatus === "open");
-
-    if (!canRespond) {
-      alertFail("Chỉ có thể phản hồi khi cuộc đua còn Draft/Open và lời mời đang Pending");
-      return;
-    }
-
     setRespondingId(`${raceId}-${action}`);
     try {
       const payload = {
-        action: action === "accept" ? "accept" : "Declined",
+        action: action === "accept" ? "accept" : "decline",
         reason: normalizeText(reasonText[raceId] || ""),
       };
       const res = await api.post(`/api/owner/invites/${raceId}/respond`, payload);
-      if (res.data?.status === "Success" || res.status === 200 || res.status === 201) {
+      if (res.data?.status === "Success") {
         const nextStatus = action === "accept" ? "Accepted" : "Declined";
         setInvites((prev) => prev.map((item) => {
           const currentRaceId = getRaceId(item);
@@ -143,23 +134,22 @@ const OwnerInvites = () => {
               const inviteStatus = getInviteStatus(invite).toLowerCase();
               const raceStatus = getRaceStatus(invite).toLowerCase();
               const raceId = getRaceId(invite);
-              const canRespond = inviteStatus === "pending" && (raceStatus === "draft" || raceStatus === "open");
-              const isResponded = inviteStatus === "accepted" || inviteStatus === "declined" || inviteStatus === "accepted" || inviteStatus === "declined";
+              const isResponded = inviteStatus === "accepted" || inviteStatus === "declined";
 
               return (
-                <div key={raceId || `${invite?.race?.name}-${invite?.owner?.fullName}`} className="rounded-[20px] border border-white/10 bg-[#111827] p-5 shadow-sm">
+                <div key={raceId || `${invite?.race?.name || invite?.name}-${invite?.owner?.fullName}`} className="rounded-[20px] border border-white/10 bg-[#111827] p-5 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-[#D9A520]/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-[#F6D46B]">
-                          {invite?.race?.name || invite?.raceName || "Cuộc đua"}
+                          {invite?.race?.name || invite?.raceName || invite?.name || "Cuộc đua"}
                         </span>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
                           raceStatus === "draft" || raceStatus === "open"
                             ? "bg-emerald-500/15 text-emerald-400"
                             : "bg-gray-500/15 text-gray-400"
                         }`}>
-                          {invite?.race?.status || invite?.raceStatus || "-"}
+                          {invite?.race?.status || invite?.raceStatus || invite?.status || "-"}
                         </span>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
                           inviteStatus === "pending"
@@ -174,7 +164,7 @@ const OwnerInvites = () => {
 
                       <div className="grid gap-2 text-sm text-gray-300 md:grid-cols-2">
                         <div>
-                          <span className="text-gray-500">Ngày gửi lời mời:</span> {formatDateTime(invite?.createdAt || invite?.invitedAt)}
+                          <span className="text-gray-500">Ngày phản hồi:</span> {formatDateTime(invite?.respondedAt)}
                         </div>
                         <div>
                           <span className="text-gray-500">Ngày diễn ra:</span> {formatDateTime(invite?.race?.raceDate || invite?.raceDate)}
@@ -183,8 +173,10 @@ const OwnerInvites = () => {
                           <span className="text-gray-500">Địa điểm:</span> {invite?.race?.location || invite?.location || "-"}
                         </div>
                         <div>
-                          <span className="text-gray-500">Phí tham gia:</span> {invite?.race?.entryFee ? `${Number(invite.race.entryFee).toLocaleString("vi-VN")}₫` : "-"}
+                          <span className="text-gray-500">Giải thưởng:</span> {invite?.race?.prizeMoney ?? invite?.prizeMoney ? `${Number(invite?.race?.prizeMoney ?? invite?.prizeMoney).toLocaleString("vi-VN")}₫` : "-"}
                         </div>
+                        <div><span className="text-gray-500">Đã đăng ký:</span> {invite?.hasRegistered ? "Có" : "Chưa"}</div>
+                        {invite?.declineReason && <div><span className="text-gray-500">Lý do từ chối:</span> {invite.declineReason}</div>}
                       </div>
                     </div>
 
@@ -196,13 +188,13 @@ const OwnerInvites = () => {
                         placeholder="Nhập lý do nếu bạn muốn"
                         rows={3}
                         className="w-full rounded-2xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D9A520]/50"
-                        disabled={isResponded || !canRespond}
+                        disabled={Boolean(respondingId) || isResponded}
                       />
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => handleRespond(invite, "accept")}
-                          disabled={respondingId === `${raceId}-accept` || isResponded || !canRespond}
+                          disabled={Boolean(respondingId) || isResponded}
                           className="flex items-center gap-2 rounded-2xl bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {respondingId === `${raceId}-accept` ? <Clock3 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
@@ -211,19 +203,13 @@ const OwnerInvites = () => {
                         <button
                           type="button"
                           onClick={() => handleRespond(invite, "decline")}
-                          disabled={respondingId === `${raceId}-decline` || isResponded || !canRespond}
+                          disabled={Boolean(respondingId) || isResponded}
                           className="flex items-center gap-2 rounded-2xl bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {respondingId === `${raceId}-decline` ? <Clock3 size={16} className="animate-spin" /> : <XCircle size={16} />}
                           Từ chối
                         </button>
                       </div>
-                      {!canRespond && (
-                        <div className="flex items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
-                          <AlertCircle size={16} />
-                          <span>Chỉ có thể phản hồi khi cuộc đua còn Draft/Open và lời mời đang Pending.</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

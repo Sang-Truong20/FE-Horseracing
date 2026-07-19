@@ -10,8 +10,6 @@ import {
   IdcardOutlined,
   FlagOutlined,
   GiftOutlined,
-  BarChartOutlined,
-  FileTextOutlined,
   LogoutOutlined,
 
   BankOutlined,
@@ -121,25 +119,6 @@ const AdminLayout = ({ children }) => {
             </NavLink>
           </div>
 
-          <div className="px-4 py-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              HỆ THỐNG
-            </h3>
-            <NavLink
-              to="/admin/reports"
-              className={navLinkClass}
-            >
-              <BarChartOutlined className="text-lg" />
-              <span>Báo Cáo & Thống Kê</span>
-            </NavLink>
-            <NavLink
-              to="/admin/logs"
-              className={navLinkClass}
-            >
-              <FileTextOutlined className="text-lg" />
-              <span>Nhật Ký Hoạt Động</span>
-            </NavLink>
-          </div>
         </nav>
 
         <div className="px-4 py-2">
