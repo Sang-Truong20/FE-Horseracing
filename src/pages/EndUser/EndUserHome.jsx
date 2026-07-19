@@ -25,7 +25,6 @@ const navItems = [
   { label: "Jockey", value: "jockeys" },
   { label: "Điểm Danh", value: "checkin" },
   { label: "Đổi Quà", value: "gifts" },
-  { label: "Điểm Thưởng" },
 ];
 
 const streakDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
