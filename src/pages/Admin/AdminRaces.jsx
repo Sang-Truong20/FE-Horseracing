@@ -251,6 +251,7 @@ const AdminRaces = () => {
         prizeMoney: Number(values.prizeMoney),
         entryFee: Number(values.entryFee),
         addEntryFeeToPrize: Boolean(values.addEntryFeeToPrize),
+        registrationCloseAt: values.registrationCloseAt.toISOString(),
         invitedOwners: (values.invitedOwners || []).map((ownerId) => String(ownerId)),
         prizeDistribution,
       };
@@ -564,6 +565,14 @@ const AdminRaces = () => {
                 name="raceDate"
                 label="Ngày đua"
                 rules={[{ required: true, message: "Vui lòng chọn ngày đua" }]}
+              >
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+
+              <Form.Item
+                name="registrationCloseAt"
+                label="Ngày đóng form"
+                rules={[{ required: true, message: "Vui lòng chọn ngày đóng form" }]}
               >
                 <DatePicker showTime className="w-full" />
               </Form.Item>
