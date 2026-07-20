@@ -76,6 +76,8 @@ const getRaceName = (prediction) => prediction?.race?.name || prediction?.raceNa
 
 const getHorseName = (prediction) => prediction?.registration?.horse?.name || prediction?.horse?.name || prediction?.horseName || prediction?.registrationId?.horse?.name || "Ngựa chưa đặt tên";
 
+const getPredictionPayout = (prediction) => prediction?.payout ?? prediction?.payoutAmount ?? prediction?.payoutPoints ?? prediction?.wonAmount;
+
 const formatPoints = (points) => Number(points || 0).toLocaleString("vi-VN");
 
 const getUserInitials = (user) => {
@@ -1584,7 +1586,7 @@ const EndUserHome = () => {
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Điểm cược</p><p className="mt-1 font-black text-amber-300">{prediction.stake ?? "-"}</p></div>
-                        <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Odds</p><p className="mt-1 font-black text-cyan-300">{prediction.oddsSnapshot ?? prediction.oddSnapshot ?? prediction.odd ?? "-"}</p></div>
+                        <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Tiền trả thưởng</p><p className="mt-1 font-black text-emerald-300">{getPredictionPayout(prediction) != null ? `${formatPoints(getPredictionPayout(prediction))} điểm` : "-"}</p></div>
                         <div className="rounded-xl bg-white/[0.04] p-3"><p className="text-xs text-slate-500">Thời gian</p><p className="mt-1 font-black text-white">{formatDateTime(prediction.createdAt || prediction.updatedAt)}</p></div>
                       </div>
                     </div>
