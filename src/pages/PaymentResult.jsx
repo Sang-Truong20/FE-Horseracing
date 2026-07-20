@@ -26,7 +26,7 @@ const PaymentResult = () => {
   const timerRef = useRef(null);
   const ipnCalledRef = useRef(false);
 
-  const txId = searchParams.get("txId") || localStorage.getItem("pendingDepositTxId");
+  const txId = searchParams.get("txId") || searchParams.get("vnp_TxnRef") || localStorage.getItem("pendingDepositTxId");
   const vnpResponseCode = searchParams.get("vnp_ResponseCode");
   const walletPath = resolveWalletPath(user?.role);
 
@@ -123,6 +123,12 @@ const PaymentResult = () => {
 
     return () => clearTimeout(timerRef.current);
   }, [txId, vnpResponseCode]);
+
+  useEffect(() => {
+    if (status === "Success" && user?.role === "OwnerHorse") {
+      navigate("/owner/wallet", { replace: true });
+    }
+  }, [navigate, status, user?.role]);
 
   const formattedAmount =
     amount != null ? `₫ ${Number(amount).toLocaleString("vi-VN")}` : null;

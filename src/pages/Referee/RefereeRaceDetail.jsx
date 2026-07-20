@@ -431,6 +431,7 @@ const RefereeRaceDetail = () => {
                 <div className="flex flex-wrap gap-3 text-sm text-gray-300">
                   <span className="inline-flex items-center gap-2"><MapPin size={16} /> {race.location}</span>
                   <span className="inline-flex items-center gap-2"><Clock size={16} /> {formatDate(race.raceDate)}</span>
+                  <span className="inline-flex items-center gap-2 text-[#F8E7A1]"><Clock size={16} /> Đóng form: {formatDate(race.registrationCloseAt)}</span>
                   <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[race.status] || "bg-white/5 text-gray-200"}`}>{race.status}</span>
                 </div>
               </div>

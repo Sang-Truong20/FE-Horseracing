@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calendar, CheckCircle2, MapPin, X, Users, XCircle } from "lucide-react";
+import { Calendar, CheckCircle2, Clock3, MapPin, X, Users, XCircle } from "lucide-react";
 import api from "../../config/axios";
 
 const statusStyles = {
   Draft: "bg-white/5 text-gray-300",
   Open: "bg-[#203A70] text-[#8DB7FF]",
   Locked: "bg-[#4B2C6F] text-[#D9A520]",
+  Ranked: "bg-[#174A2B] text-[#7DE8B4]",
   Finished: "bg-[#1F4B2C] text-[#7DE8B4]",
   Cancelled: "bg-[#4B2C2C] text-[#FF9C8A]",
 };
 
-const statusOptions = ["Tất cả", "Draft", "Open", "Locked", "Finished", "Cancelled"];
+const statusOptions = ["Tất cả", "Draft", "Open", "Locked", "Ranked", "Finished", "Cancelled"];
 
 const emptyBuckets = {
-  counts: { upcoming: 0, inProgress: 0, finished: 0, cancelled: 0 },
+  counts: { upcoming: 0, inProgress: 0, ranked: 0, finished: 0, cancelled: 0 },
   upcoming: [],
   inProgress: [],
+  ranked: [],
   finished: [],
   cancelled: [],
 };
@@ -49,11 +51,12 @@ const normalizeBuckets = (payload) => {
       counts: payload.counts || emptyBuckets.counts,
       upcoming: Array.isArray(payload.upcoming) ? payload.upcoming : [],
       inProgress: Array.isArray(payload.inProgress) ? payload.inProgress : [],
+      ranked: Array.isArray(payload.ranked) ? payload.ranked : [],
       finished: Array.isArray(payload.finished) ? payload.finished : [],
       cancelled: Array.isArray(payload.cancelled) ? payload.cancelled : [],
     };
 
-    if (next.upcoming.length || next.inProgress.length || next.finished.length || next.cancelled.length || payload.counts) {
+    if (next.upcoming.length || next.inProgress.length || next.ranked.length || next.finished.length || next.cancelled.length || payload.counts) {
       return next;
     }
   }
@@ -65,6 +68,7 @@ const normalizeBuckets = (payload) => {
 const allBucketRaces = (buckets) => [
   ...buckets.upcoming,
   ...buckets.inProgress,
+  ...buckets.ranked,
   ...buckets.finished,
   ...buckets.cancelled,
 ];
@@ -231,7 +235,8 @@ const RefereeDashboard = () => {
           <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[race.status] || "bg-white/5 text-gray-200"}`}>{race.status || "-"}</span>
           <h3 className="text-xl font-black text-white">{race.name}</h3>
           <div className="space-y-2 text-sm text-gray-300">
-            <p className="inline-flex items-center gap-2"><Calendar size={15} /> {formatDate(race.raceDate)}</p>
+            <p className="inline-flex items-center gap-2"><Calendar size={15} /> Ngày đua: {formatDate(race.raceDate)}</p>
+            <p className="inline-flex items-center gap-2 text-[#F8E7A1]"><Clock3 size={15} /> Đóng form: {formatDate(race.registrationCloseAt)}</p>
             <p className="inline-flex items-center gap-2"><MapPin size={15} /> {race.location || "-"}</p>
           </div>
         </div>
@@ -352,10 +357,11 @@ const RefereeDashboard = () => {
           ) : error ? (
             <div className="rounded-[32px] border border-red-500/20 bg-[#2B1111]/70 p-6 text-red-200">{error}</div>
           ) : selectedStatus === "Tất cả" ? (
-            <div className="grid gap-6 xl:grid-cols-3">
-              <div className="space-y-4"><h3 className="text-lg font-black text-white">Sắp bắt</h3>{buckets.upcoming.length ? buckets.upcoming.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race sắp bắt.</p>}</div>
-              <div className="space-y-4"><h3 className="text-lg font-black text-white">Đang bắt</h3>{buckets.inProgress.length ? buckets.inProgress.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race đang bắt.</p>}</div>
-              <div className="space-y-4"><h3 className="text-lg font-black text-white">Đã đua xong</h3>{buckets.finished.length ? buckets.finished.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race đã đua xong.</p>}</div>
+            <div className="grid gap-6 xl:grid-cols-4">
+               <div className="space-y-4"><h3 className="text-lg font-black text-white">Sắp bắt</h3>{buckets.upcoming.length ? buckets.upcoming.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race sắp bắt.</p>}</div>
+               <div className="space-y-4"><h3 className="text-lg font-black text-white">Đang bắt</h3>{buckets.inProgress.length ? buckets.inProgress.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race đang bắt.</p>}</div>
+               <div className="space-y-4"><h3 className="text-lg font-black text-white">Đã chấm</h3>{buckets.ranked.length ? buckets.ranked.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race đã chấm.</p>}</div>
+               <div className="space-y-4"><h3 className="text-lg font-black text-white">Đã đua xong</h3>{buckets.finished.length ? buckets.finished.map(renderRaceCard) : <p className="rounded-3xl bg-white/5 p-6 text-sm text-gray-400">Không có race đã đua xong.</p>}</div>
             </div>
           ) : visibleRaces.length ? (
             <div className="grid gap-6 xl:grid-cols-2">{visibleRaces.map(renderRaceCard)}</div>

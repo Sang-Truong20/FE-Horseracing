@@ -20,6 +20,8 @@ const getRaceStatus = (invite) => normalizeText(invite?.race?.status || invite?.
 
 const getRaceId = (invite) => invite?.race?._id || invite?.raceId || invite?.race?.id || invite?._id;
 
+const getEntityId = (entity) => entity?._id || entity?.id || entity?.horseId || entity?.jockeyId;
+
 const formatDateTime = (value) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -33,6 +35,9 @@ const OwnerInvites = () => {
   const [error, setError] = useState("");
   const [respondingId, setRespondingId] = useState("");
   const [reasonText, setReasonText] = useState({});
+  const [ownerHorses, setOwnerHorses] = useState([]);
+  const [ownerJockeys, setOwnerJockeys] = useState([]);
+  const [registrationForms, setRegistrationForms] = useState({});
 
   const fetchInvites = async () => {
     setLoading(true);
@@ -53,6 +58,19 @@ const OwnerInvites = () => {
 
   useEffect(() => {
     fetchInvites();
+    const fetchRegistrationOptions = async () => {
+      try {
+        const [horsesResponse, jockeysResponse] = await Promise.all([
+          api.get("/api/owner/horses"),
+          api.get("/api/owner/jockeys"),
+        ]);
+        if (horsesResponse.data?.status === "Success") setOwnerHorses(horsesResponse.data.data || []);
+        if (jockeysResponse.data?.status === "Success") setOwnerJockeys(jockeysResponse.data.data || jockeysResponse.data.jockeys || []);
+      } catch (err) {
+        console.error("Không tải được ngựa hoặc jockey của owner:", err);
+      }
+    };
+    fetchRegistrationOptions();
   }, []);
 
   const pendingInvites = useMemo(() => invites.filter((invite) => {
@@ -67,12 +85,24 @@ const OwnerInvites = () => {
       return;
     }
 
+    const registration = registrationForms[raceId] || {};
+    if (action === "accept" && !registration.horseId) {
+      alertFail("Vui lòng chọn ngựa để đồng ý tham gia giải.");
+      return;
+    }
+
     setRespondingId(`${raceId}-${action}`);
     try {
       const payload = {
         action: action === "accept" ? "accept" : "decline",
         reason: normalizeText(reasonText[raceId] || ""),
       };
+      if (action === "accept") {
+        payload.horseId = registration.horseId;
+        payload.hireFee = Number(registration.hireFee) || 0;
+        payload.jockeyBonusPercent = Number(registration.jockeyBonusPercent) || 0;
+        if (registration.jockeyId) payload.jockeyId = registration.jockeyId;
+      }
       const res = await api.post(`/api/owner/invites/${raceId}/respond`, payload);
       if (res.data?.status === "Success") {
         const nextStatus = action === "accept" ? "Accepted" : "Declined";
@@ -87,6 +117,7 @@ const OwnerInvites = () => {
           };
         }));
         setReasonText((prev) => ({ ...prev, [raceId]: "" }));
+        setRegistrationForms((prev) => ({ ...prev, [raceId]: {} }));
         alertSuccess(action === "accept" ? "Bạn đã đồng ý lời mời tham gia cuộc đua." : "Bạn đã từ chối lời mời tham gia cuộc đua.");
       } else {
         alertFail(res.data?.message || "Không thể gửi phản hồi");
@@ -135,6 +166,7 @@ const OwnerInvites = () => {
               const raceStatus = getRaceStatus(invite).toLowerCase();
               const raceId = getRaceId(invite);
               const isResponded = inviteStatus === "accepted" || inviteStatus === "declined";
+              const registration = registrationForms[raceId] || {};
 
               return (
                 <div key={raceId || `${invite?.race?.name || invite?.name}-${invite?.owner?.fullName}`} className="rounded-[20px] border border-white/10 bg-[#111827] p-5 shadow-sm">
@@ -181,6 +213,48 @@ const OwnerInvites = () => {
                     </div>
 
                     <div className="w-full max-w-md space-y-3">
+                      {inviteStatus === "pending" && (
+                        <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 sm:grid-cols-2">
+                          <label className="text-xs text-gray-300 sm:col-span-2">
+                            Ngựa tham gia
+                            <select
+                              value={registration.horseId || ""}
+                              onChange={(event) => setRegistrationForms((prev) => ({ ...prev, [raceId]: { ...registration, horseId: event.target.value } }))}
+                              disabled={Boolean(respondingId)}
+                              className="mt-1 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D9A520]/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="">-- Chọn ngựa --</option>
+                              {ownerHorses.map((horse) => {
+                                const horseId = getEntityId(horse);
+                                return <option key={horseId} value={horseId}>{horse.name || horse.registrationNumber || horseId}</option>;
+                              })}
+                            </select>
+                          </label>
+                          <label className="text-xs text-gray-300 sm:col-span-2">
+                            Jockey (tùy chọn nếu ngựa đã có jockey mặc định)
+                            <select
+                              value={registration.jockeyId || ""}
+                              onChange={(event) => setRegistrationForms((prev) => ({ ...prev, [raceId]: { ...registration, jockeyId: event.target.value } }))}
+                              disabled={Boolean(respondingId)}
+                              className="mt-1 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D9A520]/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="">-- Dùng jockey mặc định của ngựa --</option>
+                              {ownerJockeys.map((jockey) => {
+                                const jockeyId = getEntityId(jockey);
+                                return <option key={jockeyId} value={jockeyId}>{jockey.fullName || jockey.name || jockey.username || jockeyId}</option>;
+                              })}
+                            </select>
+                          </label>
+                          <label className="text-xs text-gray-300">
+                            Phí thuê jockey
+                            <input type="number" min="0" value={registration.hireFee || ""} onChange={(event) => setRegistrationForms((prev) => ({ ...prev, [raceId]: { ...registration, hireFee: event.target.value } }))} disabled={Boolean(respondingId)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D9A520]/50 disabled:cursor-not-allowed disabled:opacity-50" placeholder="0" />
+                          </label>
+                          <label className="text-xs text-gray-300">
+                            Thưởng jockey (%)
+                            <input type="number" min="0" max="100" value={registration.jockeyBonusPercent || ""} onChange={(event) => setRegistrationForms((prev) => ({ ...prev, [raceId]: { ...registration, jockeyBonusPercent: event.target.value } }))} disabled={Boolean(respondingId)} className="mt-1 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D9A520]/50 disabled:cursor-not-allowed disabled:opacity-50" placeholder="0" />
+                          </label>
+                        </div>
+                      )}
                       <label className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Lý do / ghi chú (tùy chọn)</label>
                       <textarea
                         value={reasonText[raceId] || ""}
