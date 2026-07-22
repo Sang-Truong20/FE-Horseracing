@@ -803,10 +803,6 @@ const EndUserHome = () => {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 md:flex">
-              <Search size={16} className="text-slate-500" />
-              <span className="text-sm text-slate-500">Tìm kiếm...</span>
-            </div>
             <NotificationMenu
               buttonClassName="relative grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white"
               unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-rose-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"

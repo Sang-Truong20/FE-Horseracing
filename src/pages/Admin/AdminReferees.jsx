@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Spin } from "antd";
 import AdminLayout from "../../layout/AdminLayout";
 import api from "../../config/axios";
@@ -7,7 +7,6 @@ const AdminReferees = () => {
   const [referees, setReferees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchReferees = async () => {
@@ -37,14 +36,7 @@ const AdminReferees = () => {
     fetchReferees();
   }, [statusFilter]);
 
-  const filteredReferees = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    return referees.filter((referee) => {
-      if (!term) return true;
-      const combined = `${referee.fullName || ""} ${referee.username || ""} ${referee.email || ""}`.toLowerCase();
-      return combined.includes(term);
-    });
-  }, [referees, searchTerm]);
+  const filteredReferees = referees;
 
   const getStatusBadge = (status) => {
     const map = {
@@ -64,17 +56,7 @@ const AdminReferees = () => {
           <p className="text-gray-400 mt-2">Danh sách trọng tài và thống kê hoạt động.</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Tìm kiếm</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo tên, username hoặc email"
-              className="w-full rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none"
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Trạng thái</label>
             <select

@@ -8,7 +8,7 @@ import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import NotificationMenu from "../components/NotificationMenu";
 import { 
   LayoutDashboard, Users, ClipboardList, Wallet, Mail,
-  Trophy, LogOut, Search, PlusCircle
+  Trophy, LogOut, PlusCircle
 } from "lucide-react";
 
 const OwnerLayout = ({ children }) => {
@@ -151,10 +151,6 @@ const OwnerLayout = ({ children }) => {
              <span>Owner Portal</span> <span className="opacity-30">/</span> <span className="text-white">{getTitleFromRoute()}</span>
            </div>
            <div className="flex items-center space-x-6">
-             <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                <input type="text" placeholder="Tìm kiếm ngựa..." className="bg-black/50 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[#D9A520]/50 w-64 transition-all" />
-             </div>
               <NotificationMenu
                 buttonClassName="p-2.5 bg-white/5 rounded-xl text-gray-400 hover:text-white relative transition-colors"
                 unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full border-2 border-black bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"

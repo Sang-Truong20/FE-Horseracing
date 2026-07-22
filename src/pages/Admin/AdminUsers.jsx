@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
-import { SearchOutlined } from "@ant-design/icons";
 import { Modal, Form, Input, Select, Spin, Alert, message } from "antd";
 import { Eye, Edit, Trash2, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
@@ -13,7 +12,6 @@ const normalizeUser = (user) => ({
 });
 
 const AdminUsers = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterHasLicense, setFilterHasLicense] = useState("all");
@@ -55,10 +53,7 @@ const AdminUsers = () => {
     fetchUsers();
   }, [filterRole, filterStatus, filterHasLicense]);
 
-  const filteredUsers = users.filter((user) => {
-    const searchString = `${user.fullName ?? ""} ${user.username ?? ""} ${user.email ?? ""}`.toLowerCase();
-    return searchString.includes(searchTerm.toLowerCase());
-  });
+  const filteredUsers = users;
 
   const itemsPerPage = 10;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -205,23 +200,7 @@ const AdminUsers = () => {
           <p className="text-gray-400 mt-2">Quản lý toàn bộ người dùng trong hệ thống</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Tìm kiếm</label>
-            <div className="relative">
-              <SearchOutlined className="absolute left-3 top-3 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Tên hoặc email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Vai trò</label>
@@ -280,7 +259,6 @@ const AdminUsers = () => {
             <label className="block text-sm font-medium text-gray-300 mb-2">&nbsp;</label>
             <button
               onClick={() => {
-                setSearchTerm("");
                 setFilterRole("all");
                 setFilterStatus("all");
                 setFilterHasLicense("all");

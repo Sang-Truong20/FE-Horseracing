@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AdminLayout from "../../layout/AdminLayout";
-import { SearchOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Modal, Space, Spin, Table, Tag, message } from "antd";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
@@ -34,7 +34,6 @@ const getStatusBadge = (status) => {
 };
 
 const AdminWithdrawals = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
@@ -70,10 +69,7 @@ const AdminWithdrawals = () => {
     fetchWithdrawals();
   }, []);
 
-  const filteredWithdrawals = withdrawals.filter((withdrawal) => {
-    const searchString = `${withdrawal.user?.fullName ?? ""} ${withdrawal.user?.email ?? ""} ${withdrawal._id ?? ""}`.toLowerCase();
-    return searchString.includes(searchTerm.toLowerCase());
-  });
+  const filteredWithdrawals = withdrawals;
 
   const itemsPerPage = 10;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -235,23 +231,7 @@ const AdminWithdrawals = () => {
 
         {error && <Alert message={error} type="error" showIcon closable />}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-300">Tìm kiếm</label>
-            <div className="relative">
-              <SearchOutlined className="absolute left-3 top-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Tên chủ ngựa, email, ID..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded-lg border border-gray-600 bg-gray-700 py-2 pl-10 pr-4 text-white placeholder-gray-400 focus:border-purple-500 focus:outline-none"
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
             <p className="text-sm text-gray-400">Tổng yêu cầu</p>
             <p className="mt-1 text-2xl font-bold text-white">{withdrawals.length}</p>

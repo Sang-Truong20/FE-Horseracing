@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Download, Plus, Search, Filter, ArrowUpDown, LayoutGrid, List, 
+  Download, Plus, Filter, ArrowUpDown, LayoutGrid, List,
   ChevronRight, Star, User, Eye, Calendar, Activity, Moon, Circle, Loader2, Trophy, X
 } from 'lucide-react';
 import api from '../../config/axios'; // Import axios đã config
@@ -148,26 +148,15 @@ const JockeyHorses = () => {
         </div>
       </div>
 
-      {/* Toolbar (Search & Filters) */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm ngựa theo tên, mã số..." 
-            className="w-full bg-[#1C152B] border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-[#EBCB75]/50 transition-colors"
-          />
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-3 bg-[#1C152B] border border-white/5 text-gray-400 rounded-xl text-sm hover:text-white transition-colors">
-            <Filter size={16} /> Trạng thái
+       <div className="flex justify-end gap-3">
+           <button className="flex items-center gap-2 px-4 py-3 bg-[#1C152B] border border-white/5 text-gray-400 rounded-xl text-sm hover:text-white transition-colors">
+             <Filter size={16} /> Trạng thái
           </button>
           <div className="flex bg-[#1C152B] border border-white/5 rounded-xl p-1">
             <button className="p-2 bg-purple-600/20 text-purple-400 rounded-lg"><LayoutGrid size={18}/></button>
             <button className="p-2 text-gray-500 hover:text-white"><List size={18}/></button>
-          </div>
-        </div>
-      </div>
+           </div>
+       </div>
 
       {/* LOADING STATE */}
       {loading && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Flag, Clock, MapPin, Search, ChevronRight, Activity } from 'lucide-react';
+import { Calendar, Flag, Clock, MapPin, ChevronRight, Activity } from 'lucide-react';
 
 const scheduleItems = [
   {
@@ -67,14 +67,6 @@ const JockeySchedule = () => {
           <div>
             <h2 className="text-xl font-bold text-white">Lịch trình chi tiết</h2>
             <p className="text-gray-400 text-sm">Theo dõi mỗi cuộc đua và trạng thái phân công của bạn.</p>
-          </div>
-          <div className="flex items-center gap-2 rounded-2xl bg-[#150F22] border border-white/10 p-2">
-            <Search className="text-gray-400" size={16} />
-            <input
-              type="text"
-              placeholder="Tìm kiếm cuộc đua..."
-              className="bg-transparent outline-none text-sm text-white placeholder:text-gray-500"
-            />
           </div>
         </div>
 
