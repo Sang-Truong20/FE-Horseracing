@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Download, Plus, Search, Filter, ArrowUpDown, LayoutGrid, List, 
-  ChevronRight, Star, User, Eye, Calendar, Activity, Moon, Circle, Loader2 
+  Download, Plus, Filter, ArrowUpDown, LayoutGrid, List,
+  ChevronRight, Star, User, Eye, Calendar, Activity, Moon, Circle, Loader2, Trophy, X
 } from 'lucide-react';
 import api from '../../config/axios'; // Import axios đã config
 
 const JockeyHorses = () => {
   const [horses, setHorses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [horseDetail, setHorseDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
 
   // 1. GỌI API FETCH DATA
   useEffect(() => {
@@ -43,6 +46,25 @@ const JockeyHorses = () => {
   const calculateWinRate = (wins, races) => {
     if (!races || races === 0) return "0%";
     return Math.round((wins / races) * 100) + "%";
+  };
+
+  const openHorseDetail = async (horseId) => {
+    if (!horseId) return;
+    setHorseDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      const response = await api.get(`/api/jockey/horses/${horseId}`);
+      if (response.data?.status === "Success") {
+        setHorseDetail(response.data.data || null);
+      } else {
+        setDetailError(response.data?.message || "Không thể tải chi tiết ngựa.");
+      }
+    } catch (error) {
+      setDetailError(error.response?.data?.message || "Lỗi khi tải chi tiết ngựa.");
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   // Render màu badge cho các mảng đua gần đây (Nếu sau này BE có trả về mảng recentForms)
@@ -126,26 +148,15 @@ const JockeyHorses = () => {
         </div>
       </div>
 
-      {/* Toolbar (Search & Filters) */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm ngựa theo tên, mã số..." 
-            className="w-full bg-[#1C152B] border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-gray-500 outline-none focus:border-[#EBCB75]/50 transition-colors"
-          />
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-3 bg-[#1C152B] border border-white/5 text-gray-400 rounded-xl text-sm hover:text-white transition-colors">
-            <Filter size={16} /> Trạng thái
+       <div className="flex justify-end gap-3">
+           <button className="flex items-center gap-2 px-4 py-3 bg-[#1C152B] border border-white/5 text-gray-400 rounded-xl text-sm hover:text-white transition-colors">
+             <Filter size={16} /> Trạng thái
           </button>
           <div className="flex bg-[#1C152B] border border-white/5 rounded-xl p-1">
             <button className="p-2 bg-purple-600/20 text-purple-400 rounded-lg"><LayoutGrid size={18}/></button>
             <button className="p-2 text-gray-500 hover:text-white"><List size={18}/></button>
-          </div>
-        </div>
-      </div>
+           </div>
+       </div>
 
       {/* LOADING STATE */}
       {loading && (
@@ -204,8 +215,7 @@ const JockeyHorses = () => {
                       <h3 className="text-xl font-bold text-white mb-1">{horse.name}</h3>
                       <div className="flex items-center gap-1.5 text-xs text-gray-400">
                         <User size={12} />
-                        {/* Vì API hiện trả về owner là chuỗi ID, nên hiển thị cắt bớt ID */}
-                        <span>Mã chủ: {horse.owner.slice(-6).toUpperCase()}</span>
+                        <span>Chủ ngựa: {horse.owner?.stableName || horse.owner?.fullName || (typeof horse.owner === "string" ? horse.owner.slice(-6).toUpperCase() : "-")}</span>
                       </div>
                     </div>
                     <button className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-500 hover:text-[#EBCB75] hover:bg-[#EBCB75]/10 transition-colors">
@@ -241,25 +251,67 @@ const JockeyHorses = () => {
                   <div className="flex-1"></div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5 mt-auto">
-                    <button className="flex items-center justify-center gap-2 py-2.5 bg-purple-600/10 text-purple-400 hover:bg-purple-600/20 rounded-xl text-sm font-medium transition-colors">
+                  <div className="pt-4 border-t border-white/5 mt-auto">
+                    <button type="button" onClick={() => openHorseDetail(horse._id)} className="flex items-center justify-center gap-2 py-2.5 bg-purple-600/10 text-purple-400 hover:bg-purple-600/20 rounded-xl text-sm font-medium transition-colors">
                       <Eye size={16} /> Chi tiết
                     </button>
-                    {isEmerald ? (
-                      <button className="flex items-center justify-center gap-2 py-2.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-sm font-medium transition-colors">
-                        <Calendar size={16} /> Lịch đua
-                      </button>
-                    ) : (
-                      <button className="flex items-center justify-center gap-2 py-2.5 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 rounded-xl text-sm font-medium transition-colors">
-                        <Activity size={16} /> Sức khoẻ
-                      </button>
-                    )}
                   </div>
 
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {(detailLoading || detailError || horseDetail) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-[28px] border border-white/10 bg-[#0B101A] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#EBCB75]">Chi tiết ngựa</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{horseDetail?.horse?.name || "Đang tải..."}</h2>
+              </div>
+              <button type="button" onClick={() => { setHorseDetail(null); setDetailError(null); }} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10"><X size={18} /></button>
+            </div>
+
+            <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+              {detailLoading ? (
+                <div className="py-16 text-center text-[#EBCB75]"><Loader2 className="mx-auto mb-3 animate-spin" size={32} />Đang tải chi tiết ngựa...</div>
+              ) : detailError ? (
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5 text-red-200">{detailError}</div>
+              ) : horseDetail && (() => {
+                const { horse, stats = {}, upcomingRaces = [], raceHistory = [] } = horseDetail;
+                const races = [...upcomingRaces, ...raceHistory];
+                return (
+                  <div className="space-y-6">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Giống / màu</p><p className="mt-1 font-black text-white">{horse.breed || "-"} / {horse.color || "-"}</p></div>
+                      <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Chủ ngựa</p><p className="mt-1 font-black text-white">{horse.owner?.stableName || horse.owner?.fullName || "-"}</p></div>
+                      <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Tốc độ / thể lực</p><p className="mt-1 font-black text-cyan-300">{horse.speedRating ?? "-"} / {horse.staminaRating ?? "-"}</p></div>
+                      <div className="rounded-2xl bg-white/[0.04] p-4"><p className="text-xs text-gray-500">Cự ly phù hợp</p><p className="mt-1 font-black text-[#EBCB75]">{horse.preferredDistanceM ? `${horse.preferredDistanceM}m` : "-"}</p></div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-center"><p className="text-xl font-black text-white">{stats.totalRaces ?? 0}</p><p className="mt-1 text-xs text-gray-500">Tổng race</p></div>
+                      <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-center"><p className="text-xl font-black text-emerald-300">{stats.wins ?? 0}</p><p className="mt-1 text-xs text-gray-500">Hạng 1</p></div>
+                      <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-center"><p className="text-xl font-black text-[#EBCB75]">{stats.podiums ?? 0}</p><p className="mt-1 text-xs text-gray-500">Top 3</p></div>
+                      <div className="rounded-2xl border border-white/10 bg-[#111827] p-4 text-center"><p className="text-xl font-black text-purple-300">{stats.averageRank ?? "-"}</p><p className="mt-1 text-xs text-gray-500">Hạng TB</p></div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2"><Trophy size={18} className="text-[#EBCB75]" /><h3 className="font-black text-white">Lịch sử và lịch đua</h3></div>
+                      {races.length ? (
+                        <div className="mt-3 space-y-3">
+                          {races.map((race, index) => <div key={race._id || race.raceId || index} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><p className="font-bold text-white">{race.name || race.raceName || "Cuộc đua"}</p><p className="mt-1 text-sm text-gray-400">{race.location || "-"} · {race.raceDate ? new Date(race.raceDate).toLocaleString("vi-VN") : "-"}</p><p className="mt-1 text-xs text-[#EBCB75]">Hạng: {race.finalRank ?? race.rank ?? "-"} · Trạng thái: {race.status || "-"}</p></div>)}
+                        </div>
+                      ) : <p className="mt-3 rounded-2xl bg-white/[0.03] p-5 text-sm text-gray-400">Chưa có lịch sử hoặc lịch đua sắp tới.</p>}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
 

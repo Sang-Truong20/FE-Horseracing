@@ -8,7 +8,7 @@ import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import NotificationMenu from "../components/NotificationMenu";
 import { 
   LayoutDashboard, Users, ClipboardList, Wallet, Mail,
-  Trophy, Flame, DollarSign, LogOut, Search, PlusCircle
+  Trophy, LogOut, PlusCircle
 } from "lucide-react";
 
 const OwnerLayout = ({ children }) => {
@@ -52,7 +52,7 @@ const OwnerLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", badge: 4 },
+    { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa" },
     { to: "/owner/jockey", icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
     { to: "/owner/races", icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
     { to: "/owner/invites", icon: <Mail size={20}/>, label: "Lời Mời Tham Gia" },
@@ -110,21 +110,6 @@ const OwnerLayout = ({ children }) => {
             </div>
           ))}
 
-          <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-2 pt-8 pb-2">Thống kê nhanh</p>
-          <div className="space-y-4 px-2">
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><Trophy size={14}/> Tổng chiến thắng</span>
-               <span className="text-[#D9A520] font-bold">27</span>
-            </div>
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><Flame size={14}/> Đua đang mở</span>
-               <span className="text-purple-500 font-bold">3</span>
-            </div>
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><DollarSign size={14}/> Doanh thu</span>
-               <span className="text-emerald-500 font-bold">₫ 84M</span>
-            </div>
-          </div>
         </nav>
 
         {/* User Button (Góc dưới Sidebar) */}
@@ -166,10 +151,6 @@ const OwnerLayout = ({ children }) => {
              <span>Owner Portal</span> <span className="opacity-30">/</span> <span className="text-white">{getTitleFromRoute()}</span>
            </div>
            <div className="flex items-center space-x-6">
-             <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-                <input type="text" placeholder="Tìm kiếm ngựa..." className="bg-black/50 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[#D9A520]/50 w-64 transition-all" />
-             </div>
               <NotificationMenu
                 buttonClassName="p-2.5 bg-white/5 rounded-xl text-gray-400 hover:text-white relative transition-colors"
                 unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full border-2 border-black bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"

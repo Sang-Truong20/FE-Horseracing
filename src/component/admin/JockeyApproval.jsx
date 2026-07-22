@@ -1,9 +1,7 @@
 import React from "react";
-import { Check, X, Search } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 const JockeyApproval = () => {
-  const [searchTerm, setSearchTerm] = React.useState("");
-
   const pendingJockeys = [
     {
       id: 1,
@@ -33,20 +31,6 @@ const JockeyApproval = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">Cấp Phép Jockey</h2>
         <div className="text-sm text-gray-400">7 yêu cầu chờ duyệt</div>
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-gray-500" size={18} />
-          <input
-            type="text"
-            placeholder="Tìm jockey..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-          />
-        </div>
       </div>
 
       {/* Jockey List */}

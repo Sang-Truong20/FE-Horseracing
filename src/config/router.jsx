@@ -21,7 +21,6 @@ import AdminReferees from "../pages/Admin/AdminReferees";
 
 import AdminWithdrawals from "../pages/Admin/AdminWithdrawals";
 import JockeyLayout from "../layout/JockeyLayout";
-import JockeyDashboard from "../pages/Jockey/JockeyDashboard";
 import JockeyHorses from "../pages/Jockey/JockeyHorses";
 import JockeyRequests from "../pages/Jockey/JockeyRequests";
 import JockeySchedule from "../pages/Jockey/JockeySchedule";
@@ -160,10 +159,10 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <JockeyLayout><JockeyDashboard /></JockeyLayout>,
+        element: <Navigate to="requests" replace />,
       },
       {
-        path: "schedule",
+        path: "races",
         element: <JockeyLayout><JockeySchedule /></JockeyLayout>,
       },
       {

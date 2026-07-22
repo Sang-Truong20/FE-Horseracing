@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../layout/AdminLayout";
-import { SearchOutlined } from "@ant-design/icons";
 import { Modal, Form, Input, Select, Spin, Alert, message } from "antd";
-import { Eye, Edit, Trash2, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Edit, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
 import api from "../../config/axios";
 
 const ADMIN_USERS_API = "/api/admin/users";
@@ -13,7 +12,6 @@ const normalizeUser = (user) => ({
 });
 
 const AdminUsers = () => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterHasLicense, setFilterHasLicense] = useState("all");
@@ -22,8 +20,11 @@ const AdminUsers = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [roleChangingUser, setRoleChangingUser] = useState(null);
+  const [roleChanging, setRoleChanging] = useState(false);
   const [form] = Form.useForm();
   const [createForm] = Form.useForm();
+  const [roleForm] = Form.useForm();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -55,10 +56,7 @@ const AdminUsers = () => {
     fetchUsers();
   }, [filterRole, filterStatus, filterHasLicense]);
 
-  const filteredUsers = users.filter((user) => {
-    const searchString = `${user.fullName ?? ""} ${user.username ?? ""} ${user.email ?? ""}`.toLowerCase();
-    return searchString.includes(searchTerm.toLowerCase());
-  });
+  const filteredUsers = users;
 
   const itemsPerPage = 10;
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -99,7 +97,6 @@ const AdminUsers = () => {
       fullName: user.fullName,
       email: user.email,
       username: user.username,
-      role: user.role,
       status: user.status,
       isVerified: user.isVerified,
       membershipLevel: user.membershipLevel,
@@ -137,7 +134,6 @@ const AdminUsers = () => {
       const formValues = await form.validateFields();
       const updateData = {
         fullName: formValues.fullName,
-        role: formValues.role,
         status: formValues.status,
         isVerified: formValues.isVerified,
         membershipLevel: formValues.membershipLevel,
@@ -168,28 +164,39 @@ const AdminUsers = () => {
     }
   };
 
-  const handleDeleteUser = (user) => {
-    Modal.confirm({
-      title: "Xác nhận xóa người dùng",
-      content: `Bạn có chắc chắn muốn xóa người dùng "${user.fullName}" không?`,
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk: async () => {
-        try {
-          const response = await api.delete(`${ADMIN_USERS_API}/${user.id}`);
-          if (response.data?.status === "Success") {
-            setUsers((prevUsers) => prevUsers.filter((item) => item.id !== user.id));
-            message.success(response.data?.message || "Xóa người dùng thành công.");
-          } else {
-            message.error(response.data?.message || "Xóa người dùng thất bại.");
-          }
-        } catch (err) {
-          console.error("Delete user error:", err);
-          message.error(err.response?.data?.message || "Lỗi khi xóa người dùng. Vui lòng thử lại.");
-        }
-      },
-    });
+  const openRoleModal = (user) => {
+    setRoleChangingUser(user);
+    roleForm.setFieldsValue({ role: user.role });
+  };
+
+  const closeRoleModal = () => {
+    if (roleChanging) return;
+    setRoleChangingUser(null);
+    roleForm.resetFields();
+  };
+
+  const handleChangeRole = async () => {
+    if (!roleChangingUser) return;
+    try {
+      const { role } = await roleForm.validateFields();
+      setRoleChanging(true);
+      const response = await api.patch(`${ADMIN_USERS_API}/${roleChangingUser.id}/role`, { role });
+      if (response.data?.status === "Success") {
+        const updatedUser = normalizeUser(response.data?.data ?? { ...roleChangingUser, role });
+        setUsers((current) => current.map((user) => (user.id === roleChangingUser.id ? { ...user, ...updatedUser } : user)));
+        setSelectedUser((current) => (current?.id === roleChangingUser.id ? { ...current, ...updatedUser } : current));
+        message.success(response.data?.message || "Đã cập nhật vai trò người dùng.");
+        setRoleChangingUser(null);
+        roleForm.resetFields();
+      } else {
+        message.error(response.data?.message || "Không thể cập nhật vai trò người dùng.");
+      }
+    } catch (error) {
+      if (error.errorFields) return;
+      message.error(error.response?.data?.message || "Lỗi khi cập nhật vai trò người dùng.");
+    } finally {
+      setRoleChanging(false);
+    }
   };
 
   const handleLockUser = async (user) => {
@@ -205,23 +212,7 @@ const AdminUsers = () => {
           <p className="text-gray-400 mt-2">Quản lý toàn bộ người dùng trong hệ thống</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Tìm kiếm</label>
-            <div className="relative">
-              <SearchOutlined className="absolute left-3 top-3 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Tên hoặc email..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Vai trò</label>
@@ -280,7 +271,6 @@ const AdminUsers = () => {
             <label className="block text-sm font-medium text-gray-300 mb-2">&nbsp;</label>
             <button
               onClick={() => {
-                setSearchTerm("");
                 setFilterRole("all");
                 setFilterStatus("all");
                 setFilterHasLicense("all");
@@ -378,8 +368,8 @@ const AdminUsers = () => {
                               <button onClick={() => handleLockUser(user)} className="p-2 hover:bg-gray-600 rounded-lg transition text-orange-400" title="Khóa/Mở khóa">
                                 {user.status === "Bị Khóa" ? <Unlock size={18} /> : <Lock size={18} />}
                               </button>
-                              <button onClick={() => handleDeleteUser(user)} className="p-2 hover:bg-gray-600 rounded-lg transition text-red-400" title="Xóa">
-                                <Trash2 size={18} />
+                              <button onClick={() => openRoleModal(user)} className="p-2 hover:bg-gray-600 rounded-lg transition text-purple-400" title="Đổi vai trò">
+                                <Edit size={18} />
                               </button>
                             </div>
                           </td>
@@ -530,20 +520,6 @@ const AdminUsers = () => {
               disabled 
             />
           </Form.Item>
-          <Form.Item label={<span className="text-gray-700">Vai trò</span>} name="role">
-            <Select 
-              placeholder="Chọn vai trò" 
-              options={[
-                { label: "EndUser", value: "EndUser" },
-                { label: "OwnerHorse", value: "OwnerHorse" },
-                { label: "Jockey", value: "Jockey" },
-                { label: "Admin", value: "Admin" },
-                                { label: "Referee", value: "Referee" },
-
-              ]}
-              style={{ height: '40px', color: '#111827' }}
-            />
-          </Form.Item>
           <Form.Item label={<span className="text-gray-700">Trạng thái</span>} name="status">
             <Select 
               placeholder="Chọn trạng thái" 
@@ -581,6 +557,29 @@ const AdminUsers = () => {
               placeholder="Nhập điểm" 
               style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb', color: '#111827', fontSize: '16px', height: '40px' }}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={`Đổi vai trò: ${roleChangingUser?.fullName || roleChangingUser?.username || "Người dùng"}`}
+        open={Boolean(roleChangingUser)}
+        onOk={handleChangeRole}
+        onCancel={closeRoleModal}
+        confirmLoading={roleChanging}
+        okText="Cập nhật vai trò"
+        cancelText="Hủy"
+        bodyStyle={{ backgroundColor: "#ffffff", color: "#111827", padding: "20px" }}
+      >
+        <Form form={roleForm} layout="vertical" className="mt-4 text-gray-900">
+          <Form.Item label="Vai trò" name="role" rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}>
+            <Select options={[
+              { label: "Admin", value: "Admin" },
+              { label: "OwnerHorse", value: "OwnerHorse" },
+              { label: "Jockey", value: "Jockey" },
+              { label: "EndUser", value: "EndUser" },
+              { label: "Referee", value: "Referee" },
+            ]} />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FileText, LogOut, Search, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
+import { FileText, LogOut, ShieldCheck, LayoutDashboard, Flag, Users } from "lucide-react";
 import { logout } from "../redux/features/userSlice";
 import NotificationMenu from "../components/NotificationMenu";
 
@@ -97,14 +97,6 @@ const RefereeLayout = ({ children }) => {
               unreadDotClassName="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white flex items-center justify-center"
               panelClassName="right-0"
             />
-            <div className="relative rounded-3xl bg-[#0F1322] border border-white/10 px-4 py-3">
-              <Search size={18} className="text-gray-500 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm cuộc đua..."
-                className="bg-transparent pl-11 pr-4 text-sm text-white outline-none placeholder:text-gray-500"
-              />
-            </div>
           </div>
         </header>
 
