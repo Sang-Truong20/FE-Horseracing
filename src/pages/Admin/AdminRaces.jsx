@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Modal, Spin, Form, Input, Select, DatePicker, Checkbox, message } from "antd";
+import dayjs from "dayjs";
 import AdminLayout from "../../layout/AdminLayout";
 import api from "../../config/axios";
 
@@ -35,6 +36,8 @@ const AdminRaces = () => {
   const [selectedRace, setSelectedRace] = useState(null);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingRace, setEditingRace] = useState(null);
+  const [updatingRace, setUpdatingRace] = useState(false);
   const [referees, setReferees] = useState([]);
   const [owners, setOwners] = useState([]);
   const [horseLabels, setHorseLabels] = useState({});
@@ -43,6 +46,7 @@ const AdminRaces = () => {
   const [oddsInputs, setOddsInputs] = useState({});
   const [oddsSubmitting, setOddsSubmitting] = useState(false);
   const [createForm] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   const getEntityLabel = (entity) => {
     if (!entity) return "-";
@@ -229,6 +233,53 @@ const AdminRaces = () => {
     setCreateModalVisible(false);
   };
 
+  const openEditModal = (race) => {
+    setEditingRace(race);
+    editForm.setFieldsValue({
+      name: race.name,
+      location: race.location,
+      registrationCloseAt: race.registrationCloseAt ? dayjs(race.registrationCloseAt) : null,
+    });
+  };
+
+  const closeEditModal = () => {
+    if (updatingRace) return;
+    setEditingRace(null);
+    editForm.resetFields();
+  };
+
+  const handleUpdateRace = async () => {
+    if (!editingRace) return;
+    try {
+      const values = await editForm.validateFields();
+      setUpdatingRace(true);
+      const response = await api.patch(`/api/admin/races/${editingRace._id}`, {
+        name: values.name,
+        location: values.location,
+        registrationCloseAt: values.registrationCloseAt.toISOString(),
+      });
+      if (response.data?.status === "Success") {
+        const updatedRace = response.data?.data || {};
+        setRaces((current) => current.map((race) => (
+          race._id === editingRace._id ? { ...race, ...updatedRace } : race
+        )));
+        setSelectedRace((current) => (
+          current?._id === editingRace._id ? { ...current, ...updatedRace } : current
+        ));
+        message.success(response.data?.message || "Đã cập nhật cuộc đua.");
+        setEditingRace(null);
+        editForm.resetFields();
+      } else {
+        message.error(response.data?.message || "Không thể cập nhật cuộc đua.");
+      }
+    } catch (err) {
+      if (err.errorFields) return;
+      message.error(err.response?.data?.message || "Lỗi khi cập nhật cuộc đua.");
+    } finally {
+      setUpdatingRace(false);
+    }
+  };
+
   const handleCreateRace = async () => {
     try {
       const values = await createForm.validateFields();
@@ -385,12 +436,20 @@ const AdminRaces = () => {
                         <td className="px-6 py-4 text-sm font-semibold text-white">{formatCurrency(race.prizeMoney)}</td>
                         <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(race.createdAt)}</td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => setSelectedRace(race)}
-                            className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-700"
-                          >
-                            Chi tiết
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setSelectedRace(race)}
+                              className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-700"
+                            >
+                              Chi tiết
+                            </button>
+                            <button
+                              onClick={() => openEditModal(race)}
+                              className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-semibold text-black transition hover:bg-amber-400"
+                            >
+                              Sửa
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -426,6 +485,10 @@ const AdminRaces = () => {
                 <div>
                   <p className="text-sm text-gray-600">raceDate</p>
                   <p className="font-semibold">{formatDateTime(selectedRace.raceDate)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">registrationCloseAt</p>
+                  <p className="font-semibold">{formatDateTime(selectedRace.registrationCloseAt)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">location</p>
@@ -538,6 +601,28 @@ const AdminRaces = () => {
               </div>
             </div>
           )}
+        </Modal>
+
+        <Modal
+          title={`Cập nhật cuộc đua: ${editingRace?.name || "-"}`}
+          open={Boolean(editingRace)}
+          onCancel={closeEditModal}
+          onOk={handleUpdateRace}
+          confirmLoading={updatingRace}
+          okText="Cập nhật"
+          cancelText="Hủy"
+        >
+          <Form form={editForm} layout="vertical">
+            <Form.Item name="name" label="Tên cuộc đua" rules={[{ required: true, message: "Vui lòng nhập tên cuộc đua" }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="location" label="Địa điểm" rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="registrationCloseAt" label="Ngày đóng form" rules={[{ required: true, message: "Vui lòng chọn ngày đóng form" }]}>
+              <DatePicker showTime className="w-full" />
+            </Form.Item>
+          </Form>
         </Modal>
 
         <Modal

@@ -941,7 +941,7 @@ const EndUserHome = () => {
                         race.registrations.map((registration, index) => {
                           const registrationId = getRegistrationId(registration);
                           const isPredicting = predictionSubmittingId === registrationId;
-                          const canPredict = race.status === "Open";
+                          const canPredict = race.status === "Open" || race.status === "Locked";
 
                           return (
                           <div key={registrationId} className="rounded-2xl bg-[#0a1120] p-4 text-sm text-slate-200 ring-1 ring-white/5">
@@ -966,7 +966,7 @@ const EndUserHome = () => {
                               ))}
                             </div>
 
-                            {!canPredict && <p className="mt-2 text-xs text-slate-500">Chỉ có thể dự đoán khi trận đang mở.</p>}
+                            {!canPredict && <p className="mt-2 text-xs text-slate-500">Chỉ có thể dự đoán khi trận đang mở hoặc đã khóa.</p>}
                           </div>
                           );
                         })
@@ -1347,20 +1347,6 @@ const EndUserHome = () => {
               <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
                 <span>{formatPoints(displayPoints)}</span>
                 <span>{displayUser.membershipLevel || "Thành viên"}</span>
-              </div>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-2xl bg-white/[0.03] p-3">
-                <p className="text-lg font-black text-emerald-300">+320</p>
-                <p className="mt-1 text-[11px] text-slate-500">Tuần này</p>
-              </div>
-              <div className="rounded-2xl bg-white/[0.03] p-3">
-                <p className="text-lg font-black text-cyan-300">62%</p>
-                <p className="mt-1 text-[11px] text-slate-500">Tỷ lệ thắng</p>
-              </div>
-              <div className="rounded-2xl bg-white/[0.03] p-3">
-                <p className="text-lg font-black text-amber-300">3</p>
-                <p className="mt-1 text-[11px] text-slate-500">Cược mở</p>
               </div>
             </div>
           </div>

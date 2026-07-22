@@ -52,7 +52,7 @@ const OwnerLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa", badge: 4 },
+    { to: "/owner", icon: <LayoutDashboard size={20}/>, label: "Quản Lý Đua Ngựa" },
     { to: "/owner/jockey", icon: <Users size={20}/>, label: "Gắn Jockey Cho Ngựa" },
     { to: "/owner/races", icon: <ClipboardList size={20}/>, label: "Đăng Ký Vào Cuộc Đua" },
     { to: "/owner/invites", icon: <Mail size={20}/>, label: "Lời Mời Tham Gia" },

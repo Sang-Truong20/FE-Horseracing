@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { LayoutDashboard, Calendar, Bell, Wallet, Settings, LogOut, Award, Smartphone, AlertTriangle } from 'lucide-react'; // Hoặc lucide-react
+import { Bell, Wallet, LogOut, Award, Smartphone, AlertTriangle } from 'lucide-react'; // Hoặc lucide-react
 import { logout } from '../redux/features/userSlice';
 import NotificationMenu from '../components/NotificationMenu';
 
@@ -16,12 +16,9 @@ const JockeyLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Tổng quan', path: '/jockey' },
-    { icon: <Calendar size={18} />, label: 'Lịch đua', path: '/jockey/schedule' },
     { icon: <Bell size={18} />, label: 'Yêu cầu đua', path: '/jockey/requests', badge: 3 },
     { icon: <Award size={18} />, label: 'Ngựa được gắn', path: '/jockey/horses' },
     { icon: <AlertTriangle size={18} />, label: 'Án phạt & kháng án', path: '/jockey/penalties' },
-    { icon: <Wallet size={18} />, label: 'Thu nhập & Thưởng', path: '/jockey/income' },
   ];
 
   return (
@@ -77,9 +74,6 @@ const JockeyLayout = ({ children }) => {
           <p className="px-3 text-xs font-semibold text-gray-500 mb-2 mt-6 uppercase tracking-wider">Tài khoản</p>
           <NavLink to="/jockey/wallet" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all">
             <Wallet size={18} /> <span className="text-sm">Quản lý ví</span>
-          </NavLink>
-          <NavLink to="/jockey/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all">
-            <Settings size={18} /> <span className="text-sm">Cài đặt</span>
           </NavLink>
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-all mt-2">
             <LogOut size={18} /> <span className="text-sm font-medium">Đăng xuất</span>

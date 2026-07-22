@@ -5,6 +5,8 @@ import api from "../../config/axios";
 const JockeyWallet = () => {
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -52,7 +54,6 @@ const JockeyWallet = () => {
       const response = await api.get("/api/wallet");
       if (response.data?.status === "Success") {
         setWallet(response.data.data);
-        setTransactions(response.data.data?.transactions || []);
       } else {
         setError(response.data?.message || "Không thể tải dữ liệu ví");
       }
@@ -64,8 +65,27 @@ const JockeyWallet = () => {
     }
   };
 
+  const fetchTransactions = async () => {
+    setTransactionsLoading(true);
+    setTransactionsError(null);
+    try {
+      const response = await api.get("/api/wallet/transactions", { params: { limit: 50 } });
+      if (response.data?.status === "Success") {
+        const payload = response.data.data;
+        setTransactions(Array.isArray(payload) ? payload : payload?.transactions || payload?.items || []);
+      } else {
+        setTransactionsError(response.data?.message || "Không thể tải lịch sử giao dịch.");
+      }
+    } catch (err) {
+      setTransactionsError(err.response?.data?.message || err.message || "Lỗi khi tải lịch sử giao dịch.");
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
+    fetchTransactions();
   }, []);
 
   const handleWithdraw = async () => {
@@ -109,6 +129,7 @@ const JockeyWallet = () => {
         setWithdrawAccountNumber("");
         setWithdrawAccountName("");
         fetchWallet();
+        fetchTransactions();
       } else {
         setWithdrawError(response.data?.message || "Rút tiền thất bại");
       }
@@ -239,7 +260,9 @@ const JockeyWallet = () => {
         <div className="p-8">
           {error ? (
             <div className="text-center py-12 text-red-400">{error}</div>
-          ) : loading ? (
+          ) : transactionsError ? (
+            <div className="text-center py-12 text-red-400">{transactionsError}</div>
+          ) : transactionsLoading ? (
             <div className="text-center py-12 text-gray-400">
               <p className="text-sm">Đang tải lịch sử giao dịch...</p>
             </div>
@@ -253,7 +276,7 @@ const JockeyWallet = () => {
                 const meta = getTransactionMeta(tx.type, tx.amount);
                 return (
                   <div
-                    key={idx}
+                    key={tx._id || tx.transactionId || idx}
                     className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-all"
                   >
                     <div className="flex items-center gap-4 flex-1">
@@ -263,7 +286,7 @@ const JockeyWallet = () => {
                       <div className="flex-1">
                         <p className="text-sm font-bold text-white">{meta.label}</p>
                         <p className="text-xs text-gray-500">
-                          {tx.date ? new Date(tx.date).toLocaleDateString("vi-VN") : "---"}
+                          {tx.createdAt || tx.date ? new Date(tx.createdAt || tx.date).toLocaleDateString("vi-VN") : "---"}
                         </p>
                       </div>
                     </div>
