@@ -8,7 +8,7 @@ import { alertSuccess, alertFail } from "../assets/hook/useNotification";
 import NotificationMenu from "../components/NotificationMenu";
 import { 
   LayoutDashboard, Users, ClipboardList, Wallet, Mail,
-  Trophy, Flame, DollarSign, LogOut, Search, PlusCircle
+  Trophy, LogOut, Search, PlusCircle
 } from "lucide-react";
 
 const OwnerLayout = ({ children }) => {
@@ -110,21 +110,6 @@ const OwnerLayout = ({ children }) => {
             </div>
           ))}
 
-          <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest px-2 pt-8 pb-2">Thống kê nhanh</p>
-          <div className="space-y-4 px-2">
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><Trophy size={14}/> Tổng chiến thắng</span>
-               <span className="text-[#D9A520] font-bold">27</span>
-            </div>
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><Flame size={14}/> Đua đang mở</span>
-               <span className="text-purple-500 font-bold">3</span>
-            </div>
-            <div className="flex justify-between items-center text-xs text-gray-400">
-               <span className="flex items-center gap-2"><DollarSign size={14}/> Doanh thu</span>
-               <span className="text-emerald-500 font-bold">₫ 84M</span>
-            </div>
-          </div>
         </nav>
 
         {/* User Button (Góc dưới Sidebar) */}
