@@ -38,6 +38,7 @@ const AdminRaces = () => {
   const [creating, setCreating] = useState(false);
   const [editingRace, setEditingRace] = useState(null);
   const [updatingRace, setUpdatingRace] = useState(false);
+  const [deletingRaceId, setDeletingRaceId] = useState(null);
   const [referees, setReferees] = useState([]);
   const [owners, setOwners] = useState([]);
   const [horseLabels, setHorseLabels] = useState({});
@@ -280,6 +281,34 @@ const AdminRaces = () => {
     }
   };
 
+  const handleDeleteRace = (race) => {
+    Modal.confirm({
+      title: "Xóa cuộc đua",
+      content: `Bạn có chắc chắn muốn xóa "${race.name}"? Race đã Finished hoặc có đăng ký Approved sẽ không thể xóa.`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setDeletingRaceId(race._id);
+        try {
+          const response = await api.delete(`/api/admin/races/${race._id}`);
+          if (response.data?.status === "Success") {
+            const deletedRaceId = response.data?.data?.deletedRaceId || race._id;
+            setRaces((current) => current.filter((item) => item._id !== deletedRaceId));
+            setSelectedRace((current) => (current?._id === deletedRaceId ? null : current));
+            message.success(response.data?.message || "Đã xóa cuộc đua.");
+          } else {
+            message.error(response.data?.message || "Không thể xóa cuộc đua.");
+          }
+        } catch (err) {
+          message.error(err.response?.data?.message || "Lỗi khi xóa cuộc đua.");
+        } finally {
+          setDeletingRaceId(null);
+        }
+      },
+    });
+  };
+
   const handleCreateRace = async () => {
     try {
       const values = await createForm.validateFields();
@@ -436,18 +465,25 @@ const AdminRaces = () => {
                         <td className="px-6 py-4 text-sm font-semibold text-white">{formatCurrency(race.prizeMoney)}</td>
                         <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(race.createdAt)}</td>
                         <td className="px-6 py-4">
-                          <div className="flex gap-2">
+                          <div className="flex flex-nowrap gap-1.5 whitespace-nowrap">
                             <button
                               onClick={() => setSelectedRace(race)}
-                              className="rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-700"
+                              className="rounded-lg bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-purple-700"
                             >
-                              Chi tiết
+                              Xem
                             </button>
                             <button
                               onClick={() => openEditModal(race)}
-                              className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-semibold text-black transition hover:bg-amber-400"
+                              className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-xs font-semibold text-black transition hover:bg-amber-400"
                             >
                               Sửa
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRace(race)}
+                              disabled={deletingRaceId === race._id}
+                              className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {deletingRaceId === race._id ? "Đang xóa..." : "Xóa"}
                             </button>
                           </div>
                         </td>

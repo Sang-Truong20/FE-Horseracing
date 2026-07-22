@@ -4,6 +4,7 @@ import AdminLayout from "../../layout/AdminLayout";
 import api from "../../config/axios";
 
 const ADMIN_GIFTS_API = "/api/admin/gifts";
+const ADMIN_REDEMPTIONS_API = "/api/admin/redemptions";
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -19,6 +20,8 @@ const getActiveBadge = (active) =>
 
 const AdminGifts = () => {
   const [gifts, setGifts] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
+  const [redemptionStatus, setRedemptionStatus] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedGift, setSelectedGift] = useState(null);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
@@ -31,8 +34,10 @@ const AdminGifts = () => {
     active: true,
   });
   const [loading, setLoading] = useState(false);
+  const [redemptionsLoading, setRedemptionsLoading] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [redemptionsError, setRedemptionsError] = useState(null);
 
   const resetNewGift = () => {
     setNewGift({
@@ -108,9 +113,30 @@ const AdminGifts = () => {
     }
   };
 
+  const fetchRedemptions = async (status = redemptionStatus) => {
+    setRedemptionsLoading(true);
+    setRedemptionsError(null);
+    try {
+      const response = await api.get(ADMIN_REDEMPTIONS_API, {
+        params: status === "all" ? undefined : { status },
+      });
+      if (response.data?.status === "Success") {
+        setRedemptions(Array.isArray(response.data.data) ? response.data.data : []);
+      } else {
+        setRedemptionsError(response.data?.message || "Không thể tải lịch sử đổi voucher.");
+      }
+    } catch (fetchError) {
+      setRedemptionsError(fetchError.response?.data?.message || "Lỗi khi tải lịch sử đổi voucher.");
+      setRedemptions([]);
+    } finally {
+      setRedemptionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     document.title = "Quà Tặng Admin - Thunder";
     fetchGifts();
+    fetchRedemptions();
   }, []);
 
   const filteredGifts = useMemo(() => {
@@ -234,6 +260,60 @@ const AdminGifts = () => {
                       </td>
                     </tr>
                   )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-gray-700 bg-gray-800">
+          <div className="flex flex-col gap-4 border-b border-gray-700 p-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Lượt Đổi Voucher</h2>
+              <p className="text-sm text-gray-400">Mã voucher đã phát hành cho người dùng.</p>
+            </div>
+            <select
+              value={redemptionStatus}
+              onChange={(event) => {
+                const status = event.target.value;
+                setRedemptionStatus(status);
+                fetchRedemptions(status);
+              }}
+              className="rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Issued">Issued</option>
+            </select>
+          </div>
+
+          {redemptionsLoading ? (
+            <div className="p-10 text-center text-gray-400"><Spin /> Đang tải lịch sử đổi voucher...</div>
+          ) : redemptionsError ? (
+            <div className="p-6"><Alert message={redemptionsError} type="error" showIcon /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-gray-700 bg-gray-700/50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">NGƯỜI DÙNG</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">QUÀ TẶNG</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">ĐIỂM ĐÃ ĐỔI</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">MÃ VOUCHER</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">TRẠNG THÁI</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">THỜI GIAN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {redemptions.length ? redemptions.map((redemption) => (
+                    <tr key={redemption._id} className="border-b border-gray-700 transition hover:bg-gray-700/50">
+                      <td className="px-6 py-4"><p className="font-semibold text-white">{redemption.user?.fullName || "-"}</p><p className="mt-1 text-xs text-gray-400">{redemption.user?.email || "-"}</p></td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{redemption.giftNameSnapshot || redemption.gift?.name || "-"}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-[#D9A520]">{Number(redemption.pointsPaid || 0).toLocaleString("vi-VN")}</td>
+                      <td className="px-6 py-4"><code className="rounded bg-black/30 px-2 py-1 text-sm font-bold text-emerald-300">{redemption.code || "-"}</code></td>
+                      <td className="px-6 py-4"><span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-medium text-emerald-300">{redemption.status || "-"}</span></td>
+                      <td className="px-6 py-4 text-sm text-gray-300">{formatDateTime(redemption.createdAt)}</td>
+                    </tr>
+                  )) : <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">Chưa có lượt đổi voucher.</td></tr>}
                 </tbody>
               </table>
             </div>

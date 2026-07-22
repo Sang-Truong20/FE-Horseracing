@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Bell, Wallet, LogOut, Award, Smartphone, AlertTriangle } from 'lucide-react'; // Hoặc lucide-react
+import { Bell, Wallet, LogOut, Award, Smartphone, AlertTriangle, Flag } from 'lucide-react'; // Hoặc lucide-react
 import { logout } from '../redux/features/userSlice';
 import NotificationMenu from '../components/NotificationMenu';
 
@@ -17,6 +17,7 @@ const JockeyLayout = ({ children }) => {
 
   const menuItems = [
     { icon: <Bell size={18} />, label: 'Yêu cầu đua', path: '/jockey/requests' },
+    { icon: <Flag size={18} />, label: 'Cuộc đua', path: '/jockey/races' },
     { icon: <Award size={18} />, label: 'Ngựa được gắn', path: '/jockey/horses' },
     { icon: <AlertTriangle size={18} />, label: 'Án phạt & kháng án', path: '/jockey/penalties' },
   ];

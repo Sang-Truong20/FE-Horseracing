@@ -162,7 +162,7 @@ export const router = createBrowserRouter([
         element: <Navigate to="requests" replace />,
       },
       {
-        path: "schedule",
+        path: "races",
         element: <JockeyLayout><JockeySchedule /></JockeyLayout>,
       },
       {
